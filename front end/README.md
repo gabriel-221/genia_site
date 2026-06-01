@@ -33,6 +33,14 @@ npm run dev
 
 Abra `http://localhost:3000`.
 
+Se o ambiente local do Next ficar inconsistente depois de mudar muitas rotas, layouts ou chunks, rode:
+
+```powershell
+npm run dev:reset
+```
+
+Esse comando limpa `.next` e reinicia o servidor de desenvolvimento.
+
 ## Observacao
 
 A rota `POST /api/predict` tenta usar o modelo salvo em `../models/random_forest_prenhez.joblib`.

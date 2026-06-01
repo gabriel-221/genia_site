@@ -14,7 +14,7 @@ from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import OneHotEncoder
 
 
-def build_pipeline(X: pd.DataFrame, n_jobs: int) -> Pipeline:
+def build_pipeline(X: pd.DataFrame, n_jobs: int, n_estimators: int) -> Pipeline:
     numeric_features = X.select_dtypes(include="number").columns.tolist()
     categorical_features = X.select_dtypes(exclude="number").columns.tolist()
 
@@ -37,7 +37,7 @@ def build_pipeline(X: pd.DataFrame, n_jobs: int) -> Pipeline:
     )
 
     model = RandomForestClassifier(
-        n_estimators=300,
+        n_estimators=n_estimators,
         max_depth=None,
         min_samples_split=2,
         min_samples_leaf=1,
@@ -133,6 +133,18 @@ def main() -> None:
         help="Number of parallel jobs used by Random Forest.",
     )
     parser.add_argument(
+        "--n-estimators",
+        type=int,
+        default=120,
+        help="Number of trees used by Random Forest.",
+    )
+    parser.add_argument(
+        "--compress",
+        type=int,
+        default=3,
+        help="Joblib compression level used when saving the trained model.",
+    )
+    parser.add_argument(
         "--drop-columns",
         nargs="*",
         default=["chance_prenhez_gerada"],
@@ -165,7 +177,7 @@ def main() -> None:
         stratify=y if y.nunique() > 1 else None,
     )
 
-    pipeline = build_pipeline(X, n_jobs=args.n_jobs)
+    pipeline = build_pipeline(X, n_jobs=args.n_jobs, n_estimators=args.n_estimators)
     pipeline.fit(X_train, y_train)
 
     predictions = pipeline.predict(X_test)
@@ -181,7 +193,7 @@ def main() -> None:
     write_feature_importance(pipeline, X_train, reports_dir)
 
     model_path = models_dir / "random_forest_prenhez.joblib"
-    joblib.dump(pipeline, model_path)
+    joblib.dump(pipeline, model_path, compress=args.compress)
 
     print(f"Training finished. Model saved at: {model_path.resolve()}")
 

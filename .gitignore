@@ -41,6 +41,7 @@ data/processed/*
 reports/*
 !reports/.gitkeep
 models/
+!models/random_forest_prenhez.joblib
 
 # Frontend / Next.js
 front end/node_modules/
