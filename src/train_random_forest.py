@@ -3,8 +3,8 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
-import joblib
 import pandas as pd
+from skl2onnx import to_onnx
 from sklearn.compose import ColumnTransformer
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.impute import SimpleImputer
@@ -24,7 +24,6 @@ def build_pipeline(X: pd.DataFrame, n_jobs: int, n_estimators: int) -> Pipeline:
 
     categorical_transformer = Pipeline(
         steps=[
-            ("imputer", SimpleImputer(strategy="most_frequent")),
             ("onehot", OneHotEncoder(handle_unknown="ignore")),
         ]
     )
@@ -47,6 +46,14 @@ def build_pipeline(X: pd.DataFrame, n_jobs: int, n_estimators: int) -> Pipeline:
     )
 
     return Pipeline(steps=[("preprocessor", preprocessor), ("model", model)])
+
+
+def cast_numeric_columns(df: pd.DataFrame) -> pd.DataFrame:
+    result = df.copy()
+    numeric_columns = result.select_dtypes(include="number").columns.tolist()
+    if numeric_columns:
+        result[numeric_columns] = result[numeric_columns].astype("float32")
+    return result
 
 
 def write_metrics(
@@ -139,12 +146,6 @@ def main() -> None:
         help="Number of trees used by Random Forest.",
     )
     parser.add_argument(
-        "--compress",
-        type=int,
-        default=3,
-        help="Joblib compression level used when saving the trained model.",
-    )
-    parser.add_argument(
         "--drop-columns",
         nargs="*",
         default=["chance_prenhez_gerada"],
@@ -167,6 +168,7 @@ def main() -> None:
 
     columns_to_drop = [args.target, *args.drop_columns]
     X = df.drop(columns=[column for column in columns_to_drop if column in df.columns])
+    X = cast_numeric_columns(X)
     y = df[args.target]
 
     X_train, X_test, y_train, y_test = train_test_split(
@@ -192,8 +194,13 @@ def main() -> None:
     )
     write_feature_importance(pipeline, X_train, reports_dir)
 
-    model_path = models_dir / "random_forest_prenhez.joblib"
-    joblib.dump(pipeline, model_path, compress=args.compress)
+    model_path = models_dir / "random_forest_prenhez.onnx"
+    model_onnx = to_onnx(
+        pipeline,
+        X_train[:1],
+        options={RandomForestClassifier: {"zipmap": False}},
+    )
+    model_path.write_bytes(model_onnx.SerializeToString())
 
     print(f"Training finished. Model saved at: {model_path.resolve()}")
 

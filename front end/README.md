@@ -43,5 +43,5 @@ Esse comando limpa `.next` e reinicia o servidor de desenvolvimento.
 
 ## Observacao
 
-A rota `POST /api/predict` tenta usar o modelo salvo em `../models/random_forest_prenhez.joblib`.
+A rota `POST /api/predict` tenta usar o modelo salvo em `../models/random_forest_prenhez.onnx`.
 Se a execucao Python falhar, a tela usa um fallback baseado na formula sintetica descrita no README do projeto.

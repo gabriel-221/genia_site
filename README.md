@@ -17,7 +17,7 @@ O guia conceitual deste repositorio e o arquivo `Relatorio Dataset Prenhez Rando
 1. Gerar ou colocar o dataset CSV em `data/raw/`.
 2. Rodar a analise exploratoria.
 3. Treinar e salvar o modelo.
-4. Usar o `.joblib` para inferencia.
+4. Usar o `.onnx` para inferencia.
 
 ## Ambiente
 
@@ -139,7 +139,7 @@ Esse script:
 - treina um `RandomForestClassifier`
 - salva metricas em `reports/model_metrics.txt`
 - salva importancias em `reports/feature_importance.csv`
-- salva o pipeline em `models/random_forest_prenhez.joblib`
+- exporta o modelo em `models/random_forest_prenhez.onnx`
 
 ## Por que usar Random Forest
 
@@ -160,11 +160,7 @@ Neste repositorio, ela tambem e uma escolha pratica porque:
 
 ## Inferencia
 
-O arquivo salvo em `models/random_forest_prenhez.joblib` pode ser usado diretamente para inferencia. Ele contem o pipeline completo:
-
-- imputacao de faltantes
-- `OneHotEncoder`
-- `RandomForestClassifier`
+O arquivo salvo em `models/random_forest_prenhez.onnx` pode ser usado diretamente para inferencia com ONNX Runtime.
 
 Os dados de entrada devem usar as mesmas colunas do treino, exceto `prenhou`.
 
