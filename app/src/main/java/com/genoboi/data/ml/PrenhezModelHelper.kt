@@ -31,17 +31,15 @@ class PrenhezModelHelper(private val context: Context) {
         // Qualquer valor fora dessa lista cai no galho padrão da Random Forest.
         val RACAS_POR_ESPECIE: Map<Especie, List<String>> = mapOf(
             Especie.BOVINO  to listOf(
-                "Girolando", "Nelore", "Gir", "Angus", "Brahman", "Holandês",
-                "Jersey", "Simmental", "Limousin", "Tabapua", "Senepol",
-                "Brangus", "Hereford", "Caracu", "Canchim", "Guzerá"
+                "Girolando", "Nelore", "Gir", "Angus", "Holandês"
             ),
             Especie.OVINO   to listOf(
-                "Dorper", "Santa Inês", "Texel", "Merino", "Suffolk",
-                "Morada Nova", "Somali", "Bergamácia", "Hampshire"
+                "Dorper", "Santa Inês", "Texel",
+                "Morada Nova", "Somalis"
             ),
             Especie.CAPRINO to listOf(
                 "Boer", "Anglo-Nubiana", "Saanen", "Alpina", "Toggenburg",
-                "Canindé", "Moxotó", "Repartida"
+                 "Moxotó"
             )
         )
 
