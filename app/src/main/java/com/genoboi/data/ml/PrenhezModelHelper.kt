@@ -10,7 +10,7 @@ import com.genoboi.domain.model.Especie
 import com.genoboi.domain.model.ResultadoPrenhez
 import java.nio.FloatBuffer
 import java.time.LocalDate
-import java.time.Period
+import java.time.temporal.ChronoUnit
 
 class PrenhezModelHelper(private val context: Context) {
 
@@ -74,7 +74,13 @@ class PrenhezModelHelper(private val context: Context) {
 
         val idadeMatriz = calculateAge(matriz.dataNascimento)
         val idadeMacho  = calculateAge(macho.dataNascimento)
-        val parentesco  = 0.05f
+
+        // Usa o parentesco real do animal; cai em 0.05 só se não foi informado
+        val parentesco = when {
+            matriz.parentescoEndogamia > 0f -> matriz.parentescoEndogamia
+            macho.parentescoEndogamia  > 0f -> macho.parentescoEndogamia
+            else                            -> 0.05f
+        }
 
         val eccFinal   = if (matriz.escoreCorporal > 0) matriz.escoreCorporal else 3.0f
         val diasFinal  = if (matriz.numeroPartos > 0 && matriz.diasDesdeUltimoParto > 0) matriz.diasDesdeUltimoParto.toFloat() else 90f
@@ -141,8 +147,9 @@ class PrenhezModelHelper(private val context: Context) {
     }
 
     private fun calculateAge(nascimento: LocalDate): Float {
-        val p = Period.between(nascimento, LocalDate.now())
-        return p.years + (p.months / 12f)
+        // Usa dias totais / 365.25 para máxima precisão — mesmo cálculo usado pela API
+        val totalDias = ChronoUnit.DAYS.between(nascimento, LocalDate.now())
+        return (totalDias / 365.25).toFloat()
     }
 
     fun close() {

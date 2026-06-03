@@ -1,5 +1,10 @@
 package com.genoboi.ui.animais
 
+import android.app.Activity
+import android.nfc.NfcAdapter
+import android.nfc.Tag
+import android.os.Handler
+import android.os.Looper
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -13,9 +18,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.genoboi.data.nfc.NfcHelper
 import com.genoboi.data.repository.AnimalRepository
 import com.genoboi.domain.model.Animal
 import com.genoboi.domain.model.Sexo
@@ -32,14 +40,55 @@ fun AnimalDetalheScreen(
     onVoltar: () -> Unit,
     onEditar: (Long) -> Unit
 ) {
+    val context = LocalContext.current
+    val activity = context as? Activity
+    val nfcAdapter = remember { NfcAdapter.getDefaultAdapter(context) }
+
     var animal by remember { mutableStateOf<Animal?>(null) }
+    var supabaseId by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
 
     LaunchedEffect(animalId) {
         animal = repository.buscarAnimalPorId(animalId)
+        supabaseId = repository.buscarSupabaseId(animalId)
     }
 
     var showDialogEvento by remember { mutableStateOf(false) }
+
+    // ── Estado NFC ────────────────────────────────────────────────────────────
+    var showNfcDialog by remember { mutableStateOf(false) }
+    var nfcStatus by remember { mutableStateOf<NfcStatus>(NfcStatus.Aguardando) }
+
+    // Ativa/desativa NFC reader mode junto com o dialog
+    DisposableEffect(showNfcDialog) {
+        if (showNfcDialog && activity != null && nfcAdapter != null) {
+            nfcAdapter.enableReaderMode(
+                activity,
+                { tag: Tag ->
+                    val sid = supabaseId
+                    if (sid == null) {
+                        Handler(Looper.getMainLooper()).post {
+                            nfcStatus = NfcStatus.SemSync
+                        }
+                        return@enableReaderMode
+                    }
+                    val url = NfcHelper.buildAnimalUrl(sid)
+                    val ok = NfcHelper.escreverUrl(tag, url)
+                    Handler(Looper.getMainLooper()).post {
+                        nfcStatus = if (ok) NfcStatus.Sucesso(url) else NfcStatus.Erro
+                    }
+                },
+                NfcAdapter.FLAG_READER_NFC_A or NfcAdapter.FLAG_READER_NFC_B or
+                NfcAdapter.FLAG_READER_NFC_F or NfcAdapter.FLAG_READER_NFC_V,
+                null
+            )
+        }
+        onDispose {
+            if (activity != null && nfcAdapter != null) {
+                try { nfcAdapter.disableReaderMode(activity) } catch (_: Exception) {}
+            }
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -185,6 +234,31 @@ fun AnimalDetalheScreen(
                     }
                 }
 
+                // ── Botão NFC ─────────────────────────────────────────────────
+                Button(
+                    onClick = {
+                        nfcStatus = NfcStatus.Aguardando
+                        showNfcDialog = true
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(52.dp),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = if (nfcAdapter != null) GenoGreen800 else GenoGray200,
+                        contentColor = Color.White
+                    ),
+                    enabled = nfcAdapter != null
+                ) {
+                    Icon(Icons.Default.Nfc, null, modifier = Modifier.size(20.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        if (nfcAdapter != null) "Cadastrar Tag NFC"
+                        else "NFC não disponível neste dispositivo",
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+
                 Spacer(Modifier.height(24.dp))
             }
         }
@@ -192,6 +266,80 @@ fun AnimalDetalheScreen(
 
     if (showDialogEvento) {
         DialogNovoEvento(onDismiss = { showDialogEvento = false })
+    }
+
+    // ── Dialog NFC ────────────────────────────────────────────────────────────
+    if (showNfcDialog) {
+        AlertDialog(
+            onDismissRequest = {
+                showNfcDialog = false
+                nfcStatus = NfcStatus.Aguardando
+            },
+            icon = { Icon(Icons.Default.Nfc, null, tint = GenoGreen800, modifier = Modifier.size(36.dp)) },
+            title = {
+                Text(
+                    when (nfcStatus) {
+                        is NfcStatus.Aguardando -> "Cadastrar Tag NFC"
+                        is NfcStatus.Sucesso    -> "Tag gravada!"
+                        is NfcStatus.Erro       -> "Erro na gravação"
+                        is NfcStatus.SemSync    -> "Animal não sincronizado"
+                    },
+                    fontWeight = FontWeight.Bold,
+                    textAlign = TextAlign.Center
+                )
+            },
+            text = {
+                Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
+                    when (val s = nfcStatus) {
+                        is NfcStatus.Aguardando -> {
+                            CircularProgressIndicator(color = GenoGreen800, modifier = Modifier.size(48.dp))
+                            Spacer(Modifier.height(16.dp))
+                            Text(
+                                "Aproxime o celular da tag NFC do animal",
+                                textAlign = TextAlign.Center,
+                                color = GenoGray600,
+                                fontSize = 14.sp
+                            )
+                        }
+                        is NfcStatus.Sucesso -> {
+                            Icon(Icons.Default.CheckCircle, null, tint = GenoGreen800, modifier = Modifier.size(48.dp))
+                            Spacer(Modifier.height(12.dp))
+                            Text("URL gravada com sucesso!", textAlign = TextAlign.Center, fontWeight = FontWeight.Bold)
+                            Spacer(Modifier.height(8.dp))
+                            Text(s.url, textAlign = TextAlign.Center, fontSize = 12.sp, color = GenoGray600)
+                        }
+                        is NfcStatus.Erro -> {
+                            Icon(Icons.Default.Error, null, tint = GenoRed, modifier = Modifier.size(48.dp))
+                            Spacer(Modifier.height(12.dp))
+                            Text(
+                                "Não foi possível gravar a tag.\nVerifique se a tag é gravável e tente novamente.",
+                                textAlign = TextAlign.Center,
+                                color = GenoGray600,
+                                fontSize = 14.sp
+                            )
+                        }
+                        is NfcStatus.SemSync -> {
+                            Icon(Icons.Default.CloudOff, null, tint = GenoAmber, modifier = Modifier.size(48.dp))
+                            Spacer(Modifier.height(12.dp))
+                            Text(
+                                "Animal ainda não sincronizado com o servidor.\nAguarde a sincronização e tente novamente.",
+                                textAlign = TextAlign.Center,
+                                color = GenoGray600,
+                                fontSize = 14.sp
+                            )
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    showNfcDialog = false
+                    nfcStatus = NfcStatus.Aguardando
+                }) {
+                    Text(if (nfcStatus is NfcStatus.Aguardando) "Cancelar" else "Fechar", color = GenoGreen800)
+                }
+            }
+        )
     }
 }
 
@@ -232,3 +380,22 @@ fun InfoItem(label: String, valor: String) {
 }
 
 val GenoGray500 = Color(0xFF9AA0A6)
+
+// ── NFC status ────────────────────────────────────────────────────────────────
+
+sealed class NfcStatus {
+    object Aguardando : NfcStatus()
+    data class Sucesso(val url: String) : NfcStatus()
+    object Erro : NfcStatus()
+    object SemSync : NfcStatus()
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+fun idadeAnimal(dataNascimento: java.time.LocalDate): String {
+    val hoje = java.time.LocalDate.now()
+    val anos = java.time.temporal.ChronoUnit.YEARS.between(dataNascimento, hoje)
+    val meses = java.time.temporal.ChronoUnit.MONTHS.between(dataNascimento.plusYears(anos), hoje)
+    return if (anos > 0) "$anos ano${if (anos > 1) "s" else ""} e $meses mês${if (meses != 1L) "es" else ""}"
+    else "$meses mês${if (meses != 1L) "es" else ""}"
+}

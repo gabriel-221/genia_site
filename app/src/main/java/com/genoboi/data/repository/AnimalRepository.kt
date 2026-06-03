@@ -40,6 +40,9 @@ class AnimalRepository(
     suspend fun buscarAnimalPorId(id: Long): Animal? =
         animalDao.buscarPorId(id)?.toDomain()
 
+    suspend fun buscarSupabaseId(id: Long): String? =
+        animalDao.buscarPorId(id)?.supabaseId
+
     suspend fun contarAnimais(): Int =
         animalDao.contarTotal()
 
