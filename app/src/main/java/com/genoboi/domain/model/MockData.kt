@@ -31,24 +31,28 @@ object MockData {
     )
 
     val animalFrida = Animal(
-        id             = 1,
-        nome           = "Frida",
-        especie        = Especie.BOVINO,
-        raca           = "Nelore",
-        linhagem       = "A12",
-        sexo           = Sexo.FEMEA,
+        id = 1,
+        nome = "Frida",
+        especie = Especie.BOVINO,
+        raca = "Nelore",
+        sexo = Sexo.FEMEA,
         dataNascimento = LocalDate.of(2022, 3, 14),
-        rfid           = "A3F2019C",
-        pesoKg         = 420f,
+        pesoKg = 420f,
         escoreCorporal = 3.0f,
-        coefEndogamia  = 6.2f,
-        fazenda        = "Fazenda Boa Esperança",
-        nomePai        = "Trovão",
-        racaPai        = "Nelore",
-        rfidPai        = "TRV-001",
-        nomeMae        = "Mimosa",
-        racaMae        = "Nelore",
-        rfidMae        = "MIM-045"
+        fazenda = "Fazenda Boa Esperança",
+        nomePai = "Trovão",
+        racaPai = "Nelore",
+        rfidPai = "TRV-001",
+        nomeMae = "Mimosa",
+        racaMae = "Nelore",
+        rfidMae = "MIM-045",
+        numeroPartos = 2,
+        abortos = 0,
+        diasDesdeUltimoParto = 45,
+        filhosNascidosMatriz = 2,
+        qualidadeSemenMacho = 0f,
+        filhosNascidosMacho = 0,
+        parentescoEndogamia = 0.05f
     )
 
     val reprodutores = listOf(
@@ -60,9 +64,10 @@ object MockData {
                 raca           = "Nelore",
                 sexo           = Sexo.MACHO,
                 dataNascimento = LocalDate.of(2021, 6, 10),
-                rfid           = "TRV-001",
                 fazenda        = "Fazenda Esperança",
-                pesoKg         = 580f
+                pesoKg         = 580f,
+                qualidadeSemenMacho = 5.0f,
+                filhosNascidosMacho = 15
             ),
             scoreCompatibilidade     = 94,
             nivelRisco               = NivelRisco.BAIXO,
@@ -78,9 +83,10 @@ object MockData {
                 raca           = "Gir",
                 sexo           = Sexo.MACHO,
                 dataNascimento = LocalDate.of(2020, 2, 5),
-                rfid           = "SUL-002",
                 fazenda        = "Fazenda São José",
-                pesoKg         = 650f
+                pesoKg         = 650f,
+                qualidadeSemenMacho = 4.0f,
+                filhosNascidosMacho = 22
             ),
             scoreCompatibilidade     = 81,
             nivelRisco               = NivelRisco.BAIXO,
@@ -96,9 +102,10 @@ object MockData {
                 raca           = "Brahman",
                 sexo           = Sexo.MACHO,
                 dataNascimento = LocalDate.of(2019, 9, 20),
-                rfid           = "IMP-003",
                 fazenda        = "Fazenda Bela Vista",
-                pesoKg         = 720f
+                pesoKg         = 720f,
+                qualidadeSemenMacho = 3.0f,
+                filhosNascidosMacho = 8
             ),
             scoreCompatibilidade     = 67,
             nivelRisco               = NivelRisco.MEDIO,
@@ -114,5 +121,49 @@ object MockData {
         EventoReprodutivo(3, 1, TipoEvento.DIAGNOSTICO,  LocalDate.of(2025,5,24), observacao = "Previsto"),
         EventoReprodutivo(4, 1, TipoEvento.PARTO,        LocalDate.of(2026,2,15), observacao = "Previsto"),
         EventoReprodutivo(5, 1, TipoEvento.DESMAME,      LocalDate.of(2026,8,15), observacao = "Previsto"),
+    )
+
+    val relatorioConsolidado = RelatorioDesempenho(
+        especie = null,
+        taxaPrenhez = 74f,
+        intervaloPartosDias = 385,
+        totalCiosDetectados = 42,
+        totalInseminacoes = 38,
+        taxaSucessoIA = 68f,
+        mediaGanhoGenetico = 12.5f,
+        animaisEmGestacao = 56
+    )
+
+    val relatorioPorEspecie = mapOf(
+        Especie.BOVINO to RelatorioDesempenho(
+            especie = Especie.BOVINO,
+            taxaPrenhez = 78f,
+            intervaloPartosDias = 410,
+            totalCiosDetectados = 24,
+            totalInseminacoes = 22,
+            taxaSucessoIA = 72f,
+            mediaGanhoGenetico = 15.0f,
+            animaisEmGestacao = 34
+        ),
+        Especie.OVINO to RelatorioDesempenho(
+            especie = Especie.OVINO,
+            taxaPrenhez = 65f,
+            intervaloPartosDias = 240,
+            totalCiosDetectados = 12,
+            totalInseminacoes = 10,
+            taxaSucessoIA = 60f,
+            mediaGanhoGenetico = 8.5f,
+            animaisEmGestacao = 15
+        ),
+        Especie.CAPRINO to RelatorioDesempenho(
+            especie = Especie.CAPRINO,
+            taxaPrenhez = 60f,
+            intervaloPartosDias = 260,
+            totalCiosDetectados = 6,
+            totalInseminacoes = 6,
+            taxaSucessoIA = 55f,
+            mediaGanhoGenetico = 7.0f,
+            animaisEmGestacao = 7
+        )
     )
 }

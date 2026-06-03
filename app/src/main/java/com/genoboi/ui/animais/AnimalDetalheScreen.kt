@@ -19,9 +19,10 @@ import androidx.compose.ui.unit.sp
 import com.genoboi.data.repository.AnimalRepository
 import com.genoboi.domain.model.Animal
 import com.genoboi.domain.model.Sexo
+import com.genoboi.ui.calendario.DialogNovoEvento
 import com.genoboi.ui.components.GenoTopBar
-import com.genoboi.ui.components.RfidTag
 import com.genoboi.ui.theme.*
+import kotlinx.coroutines.launch
 import java.time.format.DateTimeFormatter
 
 @Composable
@@ -38,6 +39,8 @@ fun AnimalDetalheScreen(
         animal = repository.buscarAnimalPorId(animalId)
     }
 
+    var showDialogEvento by remember { mutableStateOf(false) }
+
     Scaffold(
         topBar = {
             GenoTopBar(
@@ -45,15 +48,42 @@ fun AnimalDetalheScreen(
                 showBack = true,
                 onBack = onVoltar,
                 actions = {
-                    IconButton(onClick = { animal?.let { onEditar(it.id) } }) {
-                        Icon(Icons.Default.Edit, "Editar", tint = GenoGreen800)
+                    IconButton(onClick = { showDialogEvento = true }) {
+                        Icon(Icons.Default.AddCircleOutline, "Evento", tint = GenoGreen800)
+                    }
+                    var showMenu by remember { mutableStateOf(false) }
+                    IconButton(onClick = { showMenu = true }) {
+                        Icon(Icons.Default.MoreVert, "Menu", tint = GenoGreen800)
+                    }
+                    DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
+                        DropdownMenuItem(
+                            text = { Text("Editar") },
+                            onClick = {
+                                showMenu = false
+                                animal?.let { onEditar(it.id) }
+                            },
+                            leadingIcon = { Icon(Icons.Default.Edit, null) }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Excluir", color = Color.Red) },
+                            onClick = {
+                                showMenu = false
+                                animal?.let {
+                                    scope.launch {
+                                        repository.deletarAnimal(it.id)
+                                        onVoltar()
+                                    }
+                                }
+                            },
+                            leadingIcon = { Icon(Icons.Default.Delete, null, tint = Color.Red) }
+                        )
                     }
                 }
             )
         },
         containerColor = GenoGray50
     ) { padding ->
-        val currentAnimal = animal
+        val currentAnimal: Animal? = animal
         if (currentAnimal == null) {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 CircularProgressIndicator(color = GenoGreen800)
@@ -111,23 +141,33 @@ fun AnimalDetalheScreen(
                                     color = GenoGray600
                                 )
                             }
-                            if (currentAnimal.rfid.isNotEmpty()) {
-                                Spacer(Modifier.height(8.dp))
-                                RfidTag(currentAnimal.rfid)
-                            }
                         }
                     }
                 }
 
-                // Info Sections
-                InfoSection(titulo = "Informações Gerais") {
+                // Info Sections based on the Image requirements
+                InfoSection(titulo = "Informações da Unidade") {
                     InfoItem("Espécie", currentAnimal.especie.label)
                     InfoItem("Raça", currentAnimal.raca)
-                    if (currentAnimal.linhagem.isNotEmpty()) InfoItem("Linhagem", currentAnimal.linhagem)
                     InfoItem("Nascimento", currentAnimal.dataNascimento.format(DateTimeFormatter.ofPattern("dd/MM/yyyy")))
                     InfoItem("Idade", idadeAnimal(currentAnimal.dataNascimento))
-                    if (currentAnimal.pesoKg > 0) InfoItem("Peso", "${currentAnimal.pesoKg} kg")
+                    InfoItem("Peso", "${currentAnimal.pesoKg} kg")
                     InfoItem("Fazenda", currentAnimal.fazenda)
+                }
+
+                if (currentAnimal.sexo == Sexo.FEMEA) {
+                    InfoSection(titulo = "Histórico da Matriz") {
+                        InfoItem("Escore Corporal (ECC)", currentAnimal.escoreCorporal.toString())
+                        InfoItem("Número de Partos", currentAnimal.numeroPartos.toString())
+                        InfoItem("Abortos", currentAnimal.abortos.toString())
+                        InfoItem("Dias pós-parto", currentAnimal.diasDesdeUltimoParto.toString())
+                        InfoItem("Filhos nascidos", currentAnimal.filhosNascidosMatriz.toString())
+                    }
+                } else {
+                    InfoSection(titulo = "Histórico do Reprodutor") {
+                        InfoItem("Qualidade Seminal", currentAnimal.qualidadeSemenMacho.toString())
+                        InfoItem("Filhos nascidos", currentAnimal.filhosNascidosMacho.toString())
+                    }
                 }
 
                 if (currentAnimal.nomePai.isNotEmpty() || currentAnimal.nomeMae.isNotEmpty()) {
@@ -135,18 +175,23 @@ fun AnimalDetalheScreen(
                         if (currentAnimal.nomePai.isNotEmpty()) {
                             InfoItem("Pai", currentAnimal.nomePai)
                             if (currentAnimal.racaPai.isNotEmpty()) InfoItem("Raça do Pai", currentAnimal.racaPai)
+                            if (currentAnimal.rfidPai.isNotEmpty()) InfoItem("Registro/RFID Pai", currentAnimal.rfidPai)
                         }
                         if (currentAnimal.nomeMae.isNotEmpty()) {
                             InfoItem("Mãe", currentAnimal.nomeMae)
                             if (currentAnimal.racaMae.isNotEmpty()) InfoItem("Raça da Mãe", currentAnimal.racaMae)
+                            if (currentAnimal.rfidMae.isNotEmpty()) InfoItem("Registro/RFID Mãe", currentAnimal.rfidMae)
                         }
-                        InfoItem("Endogamia", "${currentAnimal.coefEndogamia}%")
                     }
                 }
 
                 Spacer(Modifier.height(24.dp))
             }
         }
+    }
+
+    if (showDialogEvento) {
+        DialogNovoEvento(onDismiss = { showDialogEvento = false })
     }
 }
 

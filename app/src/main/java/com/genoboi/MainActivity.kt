@@ -13,6 +13,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.genoboi.data.local.AppDatabase
+import com.genoboi.data.ml.PrenhezModelHelper
 import com.genoboi.data.repository.AnimalRepository
 import com.genoboi.ui.components.GenoBottomBar
 import com.genoboi.ui.components.GenoTopBar
@@ -21,23 +22,35 @@ import com.genoboi.ui.navigation.Screen
 import com.genoboi.ui.theme.GenoBOiTheme
 
 class MainActivity : ComponentActivity() {
+    private var modelHelper: PrenhezModelHelper? = null
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        try {
+            modelHelper = PrenhezModelHelper(this)
+        } catch (e: Exception) {
+            android.util.Log.e("MainActivity", "Falha ao inicializar modelHelper: ${e.message}")
+        }
         enableEdgeToEdge()
         setContent {
             GenoBOiTheme {
-                GenoApp()
+                GenoApp(modelHelper)
             }
         }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        modelHelper?.close()
     }
 }
 
 @Composable
-fun GenoApp() {
+fun GenoApp(modelHelper: PrenhezModelHelper?) {
     val context     = LocalContext.current
     val db          = remember { AppDatabase.getInstance(context) }
     val repository  = remember {
-        AnimalRepository(db.animalDao(), db.eventoDao(), db.cicloDao())
+        AnimalRepository(db.animalDao(), db.eventoDao(), db.cicloDao(), modelHelper)
     }
 
     val navController = rememberNavController()
@@ -49,7 +62,8 @@ fun GenoApp() {
         Screen.Dashboard.route,
         Screen.Animais.route,
         Screen.Match.route,
-        Screen.Calendario.route
+        Screen.Calendario.route,
+        Screen.AnimalDetalhe.route
     )
 
     // Telas que exibem a top bar padrão GENIA

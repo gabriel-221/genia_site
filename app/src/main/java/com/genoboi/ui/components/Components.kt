@@ -249,15 +249,16 @@ fun EspecieChip(label: String, selected: Boolean, onClick: () -> Unit) {
     val bg    = if (selected) GenoGreen800 else GenoGray100
     val fg    = if (selected) GenoWhite    else GenoGray600
     Surface(
-        shape    = RoundedCornerShape(20.dp),
+        shape    = RoundedCornerShape(12.dp),
         color    = bg,
         modifier = Modifier.clickable(onClick = onClick)
     ) {
         Text(
             text     = label,
-            fontSize = 12.sp,
+            fontSize = 14.sp,
+            fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
             color    = fg,
-            modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp)
+            modifier = Modifier.padding(horizontal = 18.dp, vertical = 10.dp)
         )
     }
 }

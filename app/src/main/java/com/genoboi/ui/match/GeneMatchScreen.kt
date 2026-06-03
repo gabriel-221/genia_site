@@ -3,6 +3,7 @@ package com.genoboi.ui.match
 import androidx.compose.animation.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -25,12 +26,13 @@ import com.genoboi.ui.theme.*
 
 @Composable
 fun GeneMatchScreen() {
-    val matriz      = MockData.animalFrida
-    val reprodutores = MockData.reprodutores
-    var indice by remember { mutableIntStateOf(0) }
-    var decisao by remember { mutableStateOf<Boolean?>(null) }  // null=pendente, true=match, false=pass
+    var step by remember { mutableIntStateOf(1) } // 1: Pergunta, 2: Comparação
+    var objetivo by remember { mutableStateOf("") }
+    var localizacao by remember { mutableStateOf("Local") }
 
-    val reprodutor = reprodutores.getOrNull(indice)
+    val matriz = MockData.animalFrida
+    val reprodutor = MockData.reprodutores.first().reprodutor
+    val score = MockData.reprodutores.first().scoreCompatibilidade
 
     Column(
         Modifier
@@ -54,189 +56,126 @@ fun GeneMatchScreen() {
                         Text("GeneMatch", fontWeight = FontWeight.ExtraBold,
                             fontSize = 20.sp, color = GenoGreen800)
                     }
-                    Text("${reprodutores.size} reprodutores compatíveis na região",
+                    Text("Inteligência Genética GENIA",
                         fontSize = 12.sp, color = GenoGray600)
                 }
-                Surface(
-                    shape = RoundedCornerShape(8.dp),
-                    color = GenoGreen100
-                ) {
-                    Row(
-                        Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(Icons.Default.Pets, null, tint = GenoGreen700,
-                            modifier = Modifier.size(14.dp))
-                        Spacer(Modifier.width(4.dp))
-                        Text("Sua matriz: ${matriz.nome}", fontSize = 12.sp, color = GenoGreen800)
-                    }
-                }
             }
         }
 
-        if (reprodutor == null) {
-            // Acabaram os reprodutores
-            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text("🎉", fontSize = 48.sp)
-                    Spacer(Modifier.height(12.dp))
-                    Text("Você viu todos os reprodutores!", fontWeight = FontWeight.SemiBold)
-                    Spacer(Modifier.height(8.dp))
-                    Button(
-                        onClick = { indice = 0; decisao = null },
-                        colors = ButtonDefaults.buttonColors(containerColor = GenoGreen800)
-                    ) { Text("Recomeçar") }
-                }
-            }
-            return
-        }
-
-        Column(
-            Modifier
-                .weight(1f)
-                .verticalScroll(rememberScrollState())
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            // Card principal do match
-            AnimatedContent(
-                targetState = indice,
-                transitionSpec = {
-                    (slideInHorizontally { it } + fadeIn()) togetherWith
-                    (slideOutHorizontally { -it } + fadeOut())
-                }
-            ) { _ ->
-                Card(
-                    shape     = RoundedCornerShape(16.dp),
-                    elevation = CardDefaults.cardElevation(4.dp),
-                    colors    = CardDefaults.cardColors(containerColor = GenoWhite)
-                ) {
-                    Column(Modifier.padding(20.dp)) {
-                        // Foto placeholder + nome
-                        Row(
-                            Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment     = Alignment.Top
-                        ) {
-                            // Avatar
-                            Box(
-                                Modifier
-                                    .size(72.dp)
-                                    .clip(CircleShape)
-                                    .background(GenoGreen100),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text(reprodutor.reprodutor.especie.emoji, fontSize = 32.sp)
-                            }
-
-                            // Score
-                            Column(horizontalAlignment = Alignment.End) {
-                                Text("Compatibilidade genética",
-                                    fontSize = 11.sp, color = GenoGray600)
-                                Text(
-                                    "${reprodutor.scoreCompatibilidade}%",
-                                    fontWeight = FontWeight.ExtraBold,
-                                    fontSize   = 36.sp,
-                                    color      = scoreColor(reprodutor.scoreCompatibilidade)
-                                )
-                                Surface(
-                                    shape = RoundedCornerShape(20.dp),
-                                    color = scoreColor(reprodutor.scoreCompatibilidade).copy(alpha = 0.12f)
-                                ) {
-                                    Text(
-                                        "COMPATÍVEL",
-                                        fontSize = 11.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color    = scoreColor(reprodutor.scoreCompatibilidade),
-                                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
-                                    )
-                                }
-                            }
-                        }
-
-                        Spacer(Modifier.height(12.dp))
-
-                        Text(reprodutor.reprodutor.nome,
-                            fontWeight = FontWeight.Bold, fontSize = 22.sp)
-                        Text("${reprodutor.reprodutor.especie.label} • ${reprodutor.reprodutor.raca}",
-                            fontSize = 13.sp, color = GenoGray600)
-                        Text("${reprodutor.reprodutor.fazenda}",
-                            fontSize = 12.sp, color = GenoGray400)
-
-                        Spacer(Modifier.height(14.dp))
-                        HorizontalDivider(color = GenoGray100)
-                        Spacer(Modifier.height(14.dp))
-
-                        // Comparação genética
-                        Text("Comparação genética", fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
-                        Spacer(Modifier.height(8.dp))
-
-                        GeneticaRow("Fertilidade",   "Alta",  GenoGreen700)
-                        GeneticaRow("Endogamia",     nivelRiscoLabel(reprodutor.nivelRisco),
-                            nivelRiscoColor(reprodutor.nivelRisco))
-                        GeneticaRow("Ganho genético","Alto",  GenoGreen700)
-                        GeneticaRow("Docilidade",    "Alta",  GenoGreen700)
-
-                        Spacer(Modifier.height(12.dp))
-                        HorizontalDivider(color = GenoGray100)
-                        Spacer(Modifier.height(12.dp))
-
-                        // Informações adicionais
-                        Text("Informações adicionais", fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
-                        Spacer(Modifier.height(8.dp))
-
-                        InfoRow(Icons.Default.Science,   "Disponível para IA")
-                        InfoRow(Icons.Default.AcUnit,    "Sêmen: ${
-                            if (reprodutor.reprodutor.pesoKg > 0) "Congelado" else "Consultar"
-                        }")
-                        InfoRow(Icons.Default.Person,    "Proprietário: ${reprodutor.reprodutor.fazenda}")
-                        InfoRow(Icons.Default.LocationOn,"Distância: ${reprodutor.distanciaKm.toInt()} km")
-                        if (reprodutor.ganhoGeneticoEstimado.isNotEmpty()) {
-                            InfoRow(Icons.Default.TrendingUp, reprodutor.ganhoGeneticoEstimado)
-                        }
-                    }
-                }
-            }
-        }
-
-        // Botões Match / Pass
-        Surface(shadowElevation = 8.dp) {
-            Row(
+        if (step == 1) {
+            // Passo 1: Perguntas de Preferência
+            Column(
                 Modifier
-                    .fillMaxWidth()
-                    .background(GenoWhite)
-                    .padding(16.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    .fillMaxSize()
+                    .padding(24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(24.dp)
             ) {
-                // Não compatível / Pass
-                OutlinedButton(
-                    onClick = {
-                        decisao = false
-                        if (indice < reprodutores.size - 1) indice++ else indice = reprodutores.size
-                    },
-                    modifier = Modifier.weight(1f),
-                    shape    = RoundedCornerShape(8.dp),
-                    colors   = ButtonDefaults.outlinedButtonColors(contentColor = GenoRed),
-                    border   = ButtonDefaults.outlinedButtonBorder.copy(width = 1.dp)
-                ) {
-                    Icon(Icons.Default.Close, null, modifier = Modifier.size(18.dp))
-                    Spacer(Modifier.width(6.dp))
-                    Text("NÃO COMPATÍVEL")
+                Text(
+                    "O que você quer aumentar?",
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Bold,
+                    textAlign = TextAlign.Center,
+                    color = GenoGray900
+                )
+
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    ObjetivoButton("Leite", "🥛", objetivo == "Leite", Modifier.weight(1f)) { objetivo = "Leite" }
+                    ObjetivoButton("Corte", "🥩", objetivo == "Corte", Modifier.weight(1f)) { objetivo = "Corte" }
+                    ObjetivoButton("Fertilidade", "🌱", objetivo == "Fertilidade", Modifier.weight(1f)) { objetivo = "Fertilidade" }
                 }
 
-                // Match!
+                Spacer(Modifier.height(8.dp))
+
+                Text(
+                    "Preferência de Localização",
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = GenoGray900
+                )
+
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    FilterChip(
+                        selected = localizacao == "Local",
+                        onClick = { localizacao = "Local" },
+                        label = { Text("Match Local") },
+                        modifier = Modifier.weight(1f),
+                        colors = FilterChipDefaults.filterChipColors(selectedContainerColor = GenoGreen100, selectedLabelColor = GenoGreen800)
+                    )
+                    FilterChip(
+                        selected = localizacao == "Externo",
+                        onClick = { localizacao = "Externo" },
+                        label = { Text("Externo (Geral)") },
+                        modifier = Modifier.weight(1f),
+                        colors = FilterChipDefaults.filterChipColors(selectedContainerColor = GenoGreen100, selectedLabelColor = GenoGreen800)
+                    )
+                }
+
+                Spacer(Modifier.weight(1f))
+
                 Button(
-                    onClick = {
-                        decisao = true
-                        if (indice < reprodutores.size - 1) indice++ else indice = reprodutores.size
-                    },
-                    modifier = Modifier.weight(1f),
-                    shape    = RoundedCornerShape(8.dp),
-                    colors   = ButtonDefaults.buttonColors(containerColor = GenoGreen800)
+                    onClick = { if (objetivo.isNotEmpty()) step = 2 },
+                    modifier = Modifier.fillMaxWidth().height(56.dp),
+                    shape = RoundedCornerShape(12.dp),
+                    enabled = objetivo.isNotEmpty(),
+                    colors = ButtonDefaults.buttonColors(containerColor = GenoGreen800, contentColor = Color.White)
                 ) {
-                    Text("UTILIZAR REPRODUTOR")
-                    Spacer(Modifier.width(6.dp))
-                    Icon(Icons.Default.Check, null, modifier = Modifier.size(18.dp))
+                    Text("BUSCAR MELHOR MATCH", fontWeight = FontWeight.Bold)
+                }
+            }
+        } else {
+            // Passo 2: Comparação Lado a Lado
+            Column(
+                Modifier
+                    .fillMaxSize()
+                    .padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                // Score de Match
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = GenoGreen800)
+                ) {
+                    Column(Modifier.padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text("COMPATIBILIDADE IDEAL", color = Color.White.copy(alpha = 0.8f), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        Text("$score%", color = Color.White, fontSize = 48.sp, fontWeight = FontWeight.ExtraBold)
+                        Text("Foco: $objetivo ($localizacao)", color = Color.White.copy(alpha = 0.9f), fontSize = 14.sp)
+                    }
+                }
+
+                // Casal Lado a Lado
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    MatchAnimalCard(matriz, "MATRIZ", Modifier.weight(1f))
+                    MatchAnimalCard(reprodutor, "REPRODUTOR", Modifier.weight(1f))
+                }
+
+                Spacer(Modifier.weight(1f))
+
+                // Botões de Ação Existentes
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    OutlinedButton(
+                        onClick = { step = 1; objetivo = "" },
+                        modifier = Modifier.weight(1f).height(56.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = GenoRed),
+                        border = borderStroke(1.dp, GenoRed)
+                    ) {
+                        Icon(Icons.Default.Close, null)
+                        Spacer(Modifier.width(8.dp))
+                        Text("DESCARTAR")
+                    }
+
+                    Button(
+                        onClick = { /* Simular match final */ },
+                        modifier = Modifier.weight(1f).height(56.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = GenoGreen800, contentColor = Color.White)
+                    ) {
+                        Text("DAR MATCH")
+                        Spacer(Modifier.width(8.dp))
+                        Icon(Icons.Default.Check, null)
+                    }
                 }
             }
         }
@@ -244,44 +183,50 @@ fun GeneMatchScreen() {
 }
 
 @Composable
-fun GeneticaRow(atributo: String, valor: String, cor: Color) {
-    Row(
-        Modifier
-            .fillMaxWidth()
-            .padding(vertical = 4.dp),
-        horizontalArrangement = Arrangement.SpaceBetween
+fun ObjetivoButton(label: String, emoji: String, selected: Boolean, modifier: Modifier, onClick: () -> Unit) {
+    Card(
+        modifier = modifier.clickable { onClick() },
+        shape = RoundedCornerShape(12.dp),
+        border = if (selected) borderStroke(2.dp, GenoGreen800) else null,
+        colors = CardDefaults.cardColors(containerColor = if (selected) GenoGreen50 else GenoWhite),
+        elevation = CardDefaults.cardElevation(if (selected) 4.dp else 1.dp)
     ) {
-        Text(atributo, fontSize = 13.sp, color = GenoGray600)
-        Text(valor, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = cor)
+        Column(
+            Modifier.padding(12.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Text(emoji, fontSize = 24.sp)
+            Text(label, fontSize = 12.sp, fontWeight = FontWeight.Bold, color = if (selected) GenoGreen800 else GenoGray600)
+        }
     }
 }
 
 @Composable
-fun InfoRow(icon: androidx.compose.ui.graphics.vector.ImageVector, texto: String) {
-    Row(
-        Modifier.padding(vertical = 3.dp),
-        verticalAlignment = Alignment.CenterVertically
+fun MatchAnimalCard(animal: Animal, label: String, modifier: Modifier) {
+    Card(
+        modifier = modifier,
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(containerColor = GenoWhite),
+        elevation = CardDefaults.cardElevation(2.dp)
     ) {
-        Icon(icon, null, tint = GenoGreen700, modifier = Modifier.size(16.dp))
-        Spacer(Modifier.width(8.dp))
-        Text(texto, fontSize = 13.sp, color = GenoGray600)
+        Column(Modifier.padding(12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+            Surface(shape = RoundedCornerShape(4.dp), color = GenoGray100) {
+                Text(label, modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp), fontSize = 9.sp, fontWeight = FontWeight.Bold, color = GenoGray600)
+            }
+            Spacer(Modifier.height(12.dp))
+            Box(Modifier.size(64.dp).background(GenoGreen100, CircleShape), contentAlignment = Alignment.Center) {
+                Text(animal.especie.emoji, fontSize = 32.sp)
+            }
+            Spacer(Modifier.height(8.dp))
+            Text(animal.nome, fontWeight = FontWeight.Bold, fontSize = 16.sp, textAlign = TextAlign.Center)
+            Text(animal.raca, fontSize = 12.sp, color = GenoGray600)
+            Spacer(Modifier.height(8.dp))
+            HorizontalDivider(color = GenoGray100)
+            Spacer(Modifier.height(8.dp))
+            Text("Peso: ${animal.pesoKg.toInt()}kg", fontSize = 11.sp, color = GenoGray600)
+        }
     }
 }
 
-fun scoreColor(score: Int) = when {
-    score >= 80 -> GenoGreen700
-    score >= 60 -> GenoAmber
-    else        -> GenoRed
-}
-
-fun nivelRiscoLabel(nivel: NivelRisco) = when (nivel) {
-    NivelRisco.BAIXO -> "Baixa"
-    NivelRisco.MEDIO -> "Média"
-    NivelRisco.ALTO  -> "Alta"
-}
-
-fun nivelRiscoColor(nivel: NivelRisco) = when (nivel) {
-    NivelRisco.BAIXO -> GenoGreen700
-    NivelRisco.MEDIO -> GenoAmber
-    NivelRisco.ALTO  -> GenoRed
-}
+private fun borderStroke(width: androidx.compose.ui.unit.Dp, color: Color) = androidx.compose.foundation.BorderStroke(width, color)

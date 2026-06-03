@@ -4,16 +4,23 @@ import com.genoboi.data.local.dao.AnimalDao
 import com.genoboi.data.local.dao.CicloCioDao
 import com.genoboi.data.local.dao.EventoReprodutivoDao
 import com.genoboi.data.local.entity.*
+import com.genoboi.data.ml.PrenhezModelHelper
 import com.genoboi.domain.model.Animal
 import com.genoboi.domain.model.EventoReprodutivo
+import com.genoboi.domain.model.ResultadoPrenhez
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
 class AnimalRepository(
     private val animalDao: AnimalDao,
     private val eventoDao: EventoReprodutivoDao,
-    private val cicloDao: CicloCioDao
+    private val cicloDao: CicloCioDao,
+    private val modelHelper: PrenhezModelHelper? = null
 ) {
+
+    fun simularPrenhez(matriz: Animal, macho: Animal): ResultadoPrenhez? {
+        return modelHelper?.predict(matriz, macho)
+    }
 
     fun observarAnimais(): Flow<List<Animal>> =
         animalDao.observarTodos().map { list -> list.map { it.toDomain() } }
@@ -23,9 +30,6 @@ class AnimalRepository(
 
     suspend fun buscarAnimalPorId(id: Long): Animal? =
         animalDao.buscarPorId(id)?.toDomain()
-
-    suspend fun buscarPorRfid(rfid: String): Animal? =
-        animalDao.buscarPorRfid(rfid)?.toDomain()
 
     suspend fun atualizarAnimal(animal: Animal) =
         animalDao.atualizar(animal.toEntity())

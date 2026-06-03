@@ -8,35 +8,10 @@ fun AnimalEntity.toDomain(): Animal = Animal(
     nome             = nome,
     especie          = Especie.valueOf(especie),
     raca             = raca,
-    linhagem         = linhagem,
     sexo             = Sexo.valueOf(sexo),
     dataNascimento   = LocalDate.parse(dataNascimento),
-    rfid             = rfid,
     pesoKg           = pesoKg,
     escoreCorporal   = escoreCorporal,
-    coefEndogamia    = coefEndogamia,
-    fazenda          = fazenda,
-    fotoUrl          = fotoUrl,
-    nomePai          = nomePai,
-    racaPai          = racaPai,
-    rfidPai          = rfidPai,
-    nomeMae          = nomeMae,
-    racaMae          = racaMae,
-    rfidMae          = rfidMae
-)
-
-fun Animal.toEntity(): AnimalEntity = AnimalEntity(
-    id               = id,
-    nome             = nome,
-    especie          = especie.name,
-    raca             = raca,
-    linhagem         = linhagem,
-    sexo             = sexo.name,
-    dataNascimento   = dataNascimento.toString(),
-    rfid             = rfid,
-    pesoKg           = pesoKg,
-    escoreCorporal   = escoreCorporal,
-    coefEndogamia    = coefEndogamia,
     fazenda          = fazenda,
     fotoUrl          = fotoUrl,
     nomePai          = nomePai,
@@ -45,7 +20,47 @@ fun Animal.toEntity(): AnimalEntity = AnimalEntity(
     nomeMae          = nomeMae,
     racaMae          = racaMae,
     rfidMae          = rfidMae,
-    criadoEm         = java.time.LocalDateTime.now().toString()
+    
+    // Novos campos
+    numeroPartos         = numeroPartos,
+    abortos              = abortos,
+    diasDesdeUltimoParto = diasDesdeUltimoParto,
+    filhosNascidosMatriz = filhosNascidosMatriz,
+    qualidadeSemenMacho  = qualidadeSemenMacho,
+    filhosNascidosMacho  = filhosNascidosMacho,
+    parentescoEndogamia  = parentescoEndogamia,
+    chancePrenhezGerada  = chancePrenhezGerada,
+    prenhou             = prenhou
+)
+
+fun Animal.toEntity(): AnimalEntity = AnimalEntity(
+    id               = id,
+    nome             = nome,
+    especie          = especie.name,
+    raca             = raca,
+    sexo             = sexo.name,
+    dataNascimento   = dataNascimento.toString(),
+    pesoKg           = pesoKg,
+    escoreCorporal   = escoreCorporal,
+    fazenda          = fazenda,
+    fotoUrl          = fotoUrl,
+    nomePai          = nomePai,
+    racaPai          = racaPai,
+    rfidPai          = rfidPai,
+    nomeMae          = nomeMae,
+    racaMae          = racaMae,
+    rfidMae          = rfidMae,
+
+    // Novos campos
+    numeroPartos         = numeroPartos,
+    abortos              = abortos,
+    diasDesdeUltimoParto = diasDesdeUltimoParto,
+    filhosNascidosMatriz = filhosNascidosMatriz,
+    qualidadeSemenMacho  = qualidadeSemenMacho,
+    filhosNascidosMacho  = filhosNascidosMacho,
+    parentescoEndogamia  = parentescoEndogamia,
+    chancePrenhezGerada  = chancePrenhezGerada,
+    prenhou             = prenhou
 )
 
 fun EventoReprodutivoEntity.toDomain(): EventoReprodutivo = EventoReprodutivo(

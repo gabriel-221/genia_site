@@ -23,7 +23,8 @@ import com.genoboi.ui.theme.*
 @Composable
 fun DashboardScreen(
     onNavigateToAnimais: () -> Unit = {},
-    onNavigateToAlertas: () -> Unit = {}
+    onNavigateToAlertas: () -> Unit = {},
+    onNavigateToRelatorios: () -> Unit = {}
 ) {
     val resumo   = MockData.dashboardResumo
     val alertas  = MockData.alertas
@@ -36,7 +37,7 @@ fun DashboardScreen(
             .background(GenoGray50),
         contentPadding      = PaddingValues(bottom = 24.dp)
     ) {
-        // Saudação
+        // Saudação e Atalho Relatórios
         item {
             Column(
                 Modifier
@@ -44,11 +45,34 @@ fun DashboardScreen(
                     .background(GenoWhite)
                     .padding(horizontal = 20.dp, vertical = 16.dp)
             ) {
-                Text("Olá, João! 👋", fontWeight = FontWeight.Bold, fontSize = 20.sp)
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("Fazenda Boa Esperança", fontSize = 14.sp, color = GenoGray600)
-                    Icon(Icons.Default.KeyboardArrowDown, contentDescription = null,
-                        tint = GenoGray400, modifier = Modifier.size(16.dp))
+                Row(
+                    Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column {
+                        Text("Olá, João! 👋", fontWeight = FontWeight.Bold, fontSize = 20.sp)
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text("Fazenda Boa Esperança", fontSize = 14.sp, color = GenoGray600)
+                            Icon(Icons.Default.KeyboardArrowDown, null, tint = GenoGray400, modifier = Modifier.size(16.dp))
+                        }
+                    }
+                    
+                    // Botão de Relatórios em destaque
+                    Button(
+                        onClick = onNavigateToRelatorios,
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = GenoGreen800, 
+                            contentColor = Color.White
+                        ),
+                        shape = RoundedCornerShape(12.dp),
+                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+                        elevation = ButtonDefaults.buttonElevation(4.dp)
+                    ) {
+                        Icon(Icons.Default.BarChart, null, tint = Color.White, modifier = Modifier.size(20.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text("RELATÓRIOS", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.ExtraBold)
+                    }
                 }
             }
         }

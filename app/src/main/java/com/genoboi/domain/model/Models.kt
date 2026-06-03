@@ -36,22 +36,45 @@ data class Animal(
     val nome: String,
     val especie: Especie,
     val raca: String,
-    val linhagem: String = "",
     val sexo: Sexo,
     val dataNascimento: LocalDate,
-    val rfid: String = "",
     val pesoKg: Float = 0f,
-    val escoreCorporal: Float = 3f,
-    val coefEndogamia: Float = 0f,
+    val escoreCorporal: Float = 3f, // ecc_matriz
     val fazenda: String = "",
     val fotoUrl: String? = null,
-    // Pedigree inline (simplificado)
+    
+    // Pedigree
     val nomePai: String = "",
     val racaPai: String = "",
     val rfidPai: String = "",
     val nomeMae: String = "",
     val racaMae: String = "",
-    val rfidMae: String = ""
+    val rfidMae: String = "",
+    
+    // Atributos específicos Matriz (Fêmea)
+    val numeroPartos: Int = 0,
+    val abortos: Int = 0,
+    val diasDesdeUltimoParto: Int = 0,
+    val filhosNascidosMatriz: Int = 0,
+    
+    // Atributos específicos Reprodutor (Macho)
+    val qualidadeSemenMacho: Float,
+    val filhosNascidosMacho: Int = 0,
+    
+    // Atributos de saída / IA (Escondidos do cadastro)
+    val parentescoEndogamia: Float = 0f,
+    val chancePrenhezGerada: Float = 0f,
+    val prenhou: Boolean = false
+)
+
+data class GeneMatchResult(
+    val reprodutor: Animal,
+    val scoreCompatibilidade: Int,           // 0-100
+    val nivelRisco: NivelRisco,
+    val coefEndogamiaEstimado: Float,
+    val ganhoGeneticoEstimado: String = "",
+    val distanciaKm: Float = 0f,
+    val disponivel: Boolean = true
 )
 
 data class EventoReprodutivo(
@@ -64,25 +87,6 @@ data class EventoReprodutivo(
     val tecnicoResponsavel: String = "",
     val scoreIaPrenhez: Float? = null,
     val gestacaoConfirmada: Boolean? = null
-)
-
-data class CicloCio(
-    val animalId: Long,
-    val dataDeteccao: LocalDate,
-    val proximaPrevisao: LocalDate,
-    val inseminado: Boolean = false,
-    val tipoMuco: String = "",
-    val comportamento: String = ""
-)
-
-data class GeneMatchResult(
-    val reprodutor: Animal,
-    val scoreCompatibilidade: Int,           // 0-100
-    val nivelRisco: NivelRisco,
-    val coefEndogamiaEstimado: Float,
-    val ganhoGeneticoEstimado: String = "",
-    val distanciaKm: Float = 0f,
-    val disponivel: Boolean = true
 )
 
 data class AlertaItem(
@@ -101,4 +105,23 @@ data class DashboardResumo(
     val taxaPrenhez: Int,      // %
     val alertasHoje: Int,
     val compatibilidadeGenetica: Int  // %
+)
+
+// ─── Relatórios ──────────────────────────────────────────────────────────────
+
+data class RelatorioDesempenho(
+    val especie: Especie?, // null para consolidado
+    val taxaPrenhez: Float,
+    val intervaloPartosDias: Int,
+    val totalCiosDetectados: Int,
+    val totalInseminacoes: Int,
+    val taxaSucessoIA: Float,
+    val mediaGanhoGenetico: Float,
+    val animaisEmGestacao: Int
+)
+
+data class ResultadoPrenhez(
+    val probabilidade: Float,  // 0.0 a 1.0
+    val percentual: Int,       // (probabilidade * 100).toInt()
+    val prenhez: Boolean       // classePredita == 1
 )

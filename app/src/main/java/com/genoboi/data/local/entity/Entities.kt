@@ -10,24 +10,37 @@ data class AnimalEntity(
     @PrimaryKey(autoGenerate = true)
     val id: Long = 0,
     val nome: String,
-    val especie: String,          // enum name
+    val especie: String,
     val raca: String,
-    val linhagem: String = "",
-    val sexo: String,             // enum name
-    val dataNascimento: String,   // ISO-8601 yyyy-MM-dd
-    val rfid: String = "",
+    val sexo: String,
+    val dataNascimento: String,
     val pesoKg: Float = 0f,
     val escoreCorporal: Float = 3f,
-    val coefEndogamia: Float = 0f,
     val fazenda: String = "",
     val fotoUrl: String? = null,
+    
+    // Pedigree
     val nomePai: String = "",
     val racaPai: String = "",
     val rfidPai: String = "",
     val nomeMae: String = "",
     val racaMae: String = "",
     val rfidMae: String = "",
-    val criadoEm: String = ""     // ISO-8601 timestamp
+    
+    // Atributos específicos Matriz
+    val numeroPartos: Int = 0,
+    val abortos: Int = 0,
+    val diasDesdeUltimoParto: Int = 0,
+    val filhosNascidosMatriz: Int = 0,
+    
+    // Atributos específicos Macho
+    val qualidadeSemenMacho: Float,
+    val filhosNascidosMacho: Int = 0,
+    
+    // Atributos de saída / IA
+    val parentescoEndogamia: Float = 0f,
+    val chancePrenhezGerada: Float = 0f,
+    val prenhou: Boolean = false
 )
 
 @Entity(
@@ -44,8 +57,8 @@ data class EventoReprodutivoEntity(
     @PrimaryKey(autoGenerate = true)
     val id: Long = 0,
     val animalId: Long,
-    val tipo: String,             // TipoEvento.name
-    val data: String,             // yyyy-MM-dd
+    val tipo: String,
+    val data: String,
     val observacao: String = "",
     val semenReprodutor: String = "",
     val tecnicoResponsavel: String = "",

@@ -18,9 +18,6 @@ interface AnimalDao {
     @Query("SELECT * FROM animais WHERE id = :id")
     suspend fun buscarPorId(id: Long): AnimalEntity?
 
-    @Query("SELECT * FROM animais WHERE rfid = :rfid LIMIT 1")
-    suspend fun buscarPorRfid(rfid: String): AnimalEntity?
-
     @Query("SELECT COUNT(*) FROM animais")
     suspend fun contarTotal(): Int
 

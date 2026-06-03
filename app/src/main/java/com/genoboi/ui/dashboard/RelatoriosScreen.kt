@@ -128,7 +128,7 @@ fun FilterButton(label: String, selected: Boolean, onClick: () -> Unit) {
         onClick = onClick,
         colors = ButtonDefaults.buttonColors(
             containerColor = if (selected) GenoGreen800 else GenoWhite,
-            contentColor = if (selected) GenoWhite else GenoGray600
+            contentColor = if (selected) Color.White else GenoGray600
         ),
         elevation = ButtonDefaults.buttonElevation(if (selected) 2.dp else 0.dp),
         shape = RoundedCornerShape(10.dp),
