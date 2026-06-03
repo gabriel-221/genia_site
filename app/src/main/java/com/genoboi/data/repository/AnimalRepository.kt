@@ -7,6 +7,7 @@ import com.genoboi.data.local.dao.EventoReprodutivoDao
 import com.genoboi.data.local.entity.*
 import com.genoboi.data.ml.PrenhezModelHelper
 import com.genoboi.data.remote.SupabaseRepository
+import com.genoboi.data.remote.dto.toDomain
 import com.genoboi.domain.model.Animal
 import com.genoboi.domain.model.EventoReprodutivo
 import com.genoboi.domain.model.ResultadoPrenhez
