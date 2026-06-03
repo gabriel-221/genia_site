@@ -366,7 +366,13 @@ fun PassoBasico(estado: CadastroState, onChange: (CadastroState) -> Unit) {
             if (it.length <= 8) onChange(estado.copy(dataNascimento = it)) 
         }
         
-        CampoTexto("Raça *", estado.raca) { onChange(estado.copy(raca = it)) }
+        val racasDisponiveis = com.genoboi.data.ml.PrenhezModelHelper.RACAS_POR_ESPECIE[estado.especie] ?: emptyList()
+        DropdownCampo(
+            label = "Raça *",
+            opcoes = racasDisponiveis,
+            selecionado = if (estado.raca in racasDisponiveis) estado.raca else "",
+            onSelect = { idx -> onChange(estado.copy(raca = racasDisponiveis[idx])) }
+        )
         CampoTexto("Fazenda *", estado.fazenda) { onChange(estado.copy(fazenda = it)) }
 
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -375,9 +381,14 @@ fun PassoBasico(estado: CadastroState, onChange: (CadastroState) -> Unit) {
                 modifier = Modifier.weight(1f)) { onChange(estado.copy(peso = it)) }
             
             if (estado.sexo == Sexo.FEMEA) {
-                CampoTexto("ECC (Escore Corporal)", estado.escoreCorporal,
+                val eccVal = estado.escoreCorporal.replace(",", ".").toFloatOrNull() ?: 0f
+                CampoTexto(
+                    label = "ECC 1-5 (ideal: 3.0-3.5)",
+                    valor = estado.escoreCorporal,
                     teclado = KeyboardType.Decimal,
-                    modifier = Modifier.weight(1f)) { onChange(estado.copy(escoreCorporal = it)) }
+                    isError = eccVal > 0f && (eccVal < 1f || eccVal > 5f),
+                    modifier = Modifier.weight(1f)
+                ) { onChange(estado.copy(escoreCorporal = it)) }
             }
         }
 
@@ -401,7 +412,13 @@ fun PassoBasico(estado: CadastroState, onChange: (CadastroState) -> Unit) {
         } else {
             Text("Histórico do Reprodutor", fontWeight = FontWeight.SemiBold, fontSize = 14.sp, color = GenoGreen800)
             
-            CampoTexto("Qualidade Seminal (1-5)", estado.qualidadeSemenMacho, teclado = KeyboardType.Decimal) { onChange(estado.copy(qualidadeSemenMacho = it)) }
+            val semenVal = estado.qualidadeSemenMacho.replace(",", ".").toFloatOrNull() ?: 0f
+            CampoTexto(
+                label = "Qualidade Seminal (1-5, ideal: 3-5)",
+                valor = estado.qualidadeSemenMacho,
+                teclado = KeyboardType.Decimal,
+                isError = semenVal > 0f && (semenVal < 1f || semenVal > 5f)
+            ) { onChange(estado.copy(qualidadeSemenMacho = it)) }
             CampoTexto("Filhos nascidos", estado.filhosNascidosMacho,
                 teclado = KeyboardType.Number) { onChange(estado.copy(filhosNascidosMacho = it)) }
         }

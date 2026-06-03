@@ -40,7 +40,10 @@ data class AnimalEntity(
     // Atributos de saída / IA
     val parentescoEndogamia: Float = 0f,
     val chancePrenhezGerada: Float = 0f,
-    val prenhou: Boolean = false
+    val prenhou: Boolean = false,
+
+    // ID do registro no Supabase (null enquanto não sincronizado)
+    val supabaseId: String? = null
 )
 
 @Entity(

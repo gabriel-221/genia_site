@@ -14,6 +14,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.genoboi.data.local.AppDatabase
 import com.genoboi.data.ml.PrenhezModelHelper
+import com.genoboi.data.remote.SupabaseRepository
 import com.genoboi.data.repository.AnimalRepository
 import com.genoboi.ui.components.GenoBottomBar
 import com.genoboi.ui.components.GenoTopBar
@@ -47,10 +48,16 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun GenoApp(modelHelper: PrenhezModelHelper?) {
-    val context     = LocalContext.current
-    val db          = remember { AppDatabase.getInstance(context) }
-    val repository  = remember {
-        AnimalRepository(db.animalDao(), db.eventoDao(), db.cicloDao(), modelHelper)
+    val context        = LocalContext.current
+    val db             = remember { AppDatabase.getInstance(context) }
+    val remoteRepo     = remember { SupabaseRepository(context) }
+    val repository     = remember {
+        AnimalRepository(db.animalDao(), db.eventoDao(), db.cicloDao(), modelHelper, remoteRepo)
+    }
+
+    // Sincroniza do Supabase na abertura do app (em background, sem bloquear a UI)
+    androidx.compose.runtime.LaunchedEffect(Unit) {
+        repository.sincronizarDeRemoto()
     }
 
     val navController = rememberNavController()

@@ -32,6 +32,9 @@ interface AnimalDao {
 
     @Query("DELETE FROM animais WHERE id = :id")
     suspend fun deletarPorId(id: Long)
+
+    @Query("SELECT * FROM animais WHERE supabaseId = :supabaseId LIMIT 1")
+    suspend fun buscarPorSupabaseId(supabaseId: String): AnimalEntity?
 }
 
 @Dao

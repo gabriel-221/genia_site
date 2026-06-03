@@ -17,7 +17,7 @@ import com.genoboi.data.local.entity.EventoReprodutivoEntity
         EventoReprodutivoEntity::class,
         CicloCioEntity::class
     ],
-    version = 3,
+    version = 4,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
