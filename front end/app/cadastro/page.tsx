@@ -4,27 +4,30 @@ import { ChangeEvent, useMemo, useState } from "react";
 import { useAnimalStore } from "@/lib/animal-store";
 import { baseForm, speciesBreeds } from "@/lib/config";
 import { buildId, formatPercent } from "@/lib/prediction";
-import { estimatePregnancyLocally } from "@/lib/scoring";
 import { AnimalRecord } from "@/lib/types";
+import { scoreAnimalReproductiveBase } from "@/lib/scoring";
 
 export default function CadastroPage() {
   const { animals, setAnimals, isHydrated } = useAnimalStore();
   const [formData, setFormData] = useState<AnimalRecord>(baseForm);
 
-  const averagePregnancyRate = useMemo(() => {
+  const femalesCount = animals.filter((animal) => animal.sexo === "femea").length;
+  const malesCount = animals.filter((animal) => animal.sexo === "macho").length;
+
+  const averageReproductiveRate = useMemo(() => {
     if (!animals.length) {
       return 0;
     }
 
     const total = animals.reduce(
-      (sum, animal) => sum + estimatePregnancyLocally(animal).probability,
+      (sum, animal) => sum + scoreAnimalReproductiveBase(animal),
       0,
     );
 
     return total / animals.length;
   }, [animals]);
 
-  function updateFormField(field: keyof AnimalRecord, value: string | number) {
+  function updateFormField(field: keyof AnimalRecord, value: string | number | null) {
     setFormData((current) => {
       const nextData = {
         ...current,
@@ -33,8 +36,32 @@ export default function CadastroPage() {
 
       if (field === "especie") {
         const nextSpecies = value as AnimalRecord["especie"];
-        nextData.raca_matriz = speciesBreeds[nextSpecies].female[0];
-        nextData.raca_macho = speciesBreeds[nextSpecies].male[0];
+        nextData.raca =
+          current.sexo === "femea"
+            ? speciesBreeds[nextSpecies].female[0]
+            : speciesBreeds[nextSpecies].male[0];
+      }
+
+      if (field === "sexo") {
+        const nextSex = value as AnimalRecord["sexo"];
+        nextData.raca =
+          nextSex === "femea"
+            ? speciesBreeds[current.especie].female[0]
+            : speciesBreeds[current.especie].male[0];
+
+        if (nextSex === "femea") {
+          nextData.ecc = current.ecc ?? 3.4;
+          nextData.numero_partos = current.numero_partos ?? 0;
+          nextData.abortos = current.abortos ?? 0;
+          nextData.dias_desde_ultimo_parto = current.dias_desde_ultimo_parto ?? 120;
+          nextData.qualidade_semen = null;
+        } else {
+          nextData.ecc = null;
+          nextData.numero_partos = null;
+          nextData.abortos = null;
+          nextData.dias_desde_ultimo_parto = null;
+          nextData.qualidade_semen = current.qualidade_semen ?? 3;
+        }
       }
 
       return nextData;
@@ -59,14 +86,19 @@ export default function CadastroPage() {
     setFormData(baseForm);
   }
 
+  const breedOptions =
+    formData.sexo === "femea"
+      ? speciesBreeds[formData.especie].female
+      : speciesBreeds[formData.especie].male;
+
   return (
     <main className="page-shell">
       <section className="hero">
         <div className="hero-copy">
-          <h1>Cadastro de animais</h1>
+          <h1>Cadastro individual de animais</h1>
           <p>
-            Registre as matrizes e reprodutores do plantel para usar depois na previsao de
-            cruzamento e no painel genetico por objetivo.
+            Cadastre cada animal separadamente, informando se ele e macho ou femea. O cruzamento
+            depois vai combinar uma femea como matriz e um macho como reprodutor.
           </p>
         </div>
 
@@ -74,19 +106,19 @@ export default function CadastroPage() {
           <article className="metric-card spotlight">
             <span>Animais disponiveis</span>
             <strong>{isHydrated ? animals.length : "..."}</strong>
-            <p>Todos os animais cadastrados aqui ficam disponiveis nas outras paginas.</p>
+            <p>Os animais cadastrados aqui abastecem o cruzamento e o painel genetico.</p>
           </article>
 
           <article className="metric-card">
-            <span>Taxa media local estimada</span>
-            <strong>{formatPercent(averagePregnancyRate)}</strong>
-            <p>Media calculada pela formula sintetica para leitura rapida do lote atual.</p>
+            <span>Base reprodutiva media</span>
+            <strong>{formatPercent(averageReproductiveRate)}</strong>
+            <p>Leitura media do potencial reprodutivo individual do plantel atual.</p>
           </article>
 
           <article className="metric-card">
-            <span>Fluxo recomendado</span>
-            <strong>Cadastro → Cruzamento → Painel</strong>
-            <p>Cadastre primeiro, depois compare pares e por fim avalie o objetivo genetico.</p>
+            <span>Composicao do cadastro</span>
+            <strong>{femalesCount} femeas / {malesCount} machos</strong>
+            <p>O cruzamento so e liberado quando houver pelo menos uma femea e um macho.</p>
           </article>
         </div>
       </section>
@@ -96,18 +128,18 @@ export default function CadastroPage() {
           <div className="panel-heading">
             <div>
               <h2>Novo animal</h2>
-              <p>Preencha os dados zootecnicos principais para adicionar o animal ao plantel.</p>
+              <p>Preencha somente os dados que fazem sentido para o sexo do animal.</p>
             </div>
           </div>
 
           <form className="animal-form" onSubmit={handleSubmit}>
             <label>
-              Nome do lote ou animal
+              Nome do animal
               <input
                 name="nome"
                 value={formData.nome}
                 onChange={handleFieldChange}
-                placeholder="Ex.: Matriz Aurora 12"
+                placeholder="Ex.: Aurora 12"
                 required
               />
             </label>
@@ -125,13 +157,17 @@ export default function CadastroPage() {
               </label>
 
               <label>
-                Raca da matriz
-                <select
-                  name="raca_matriz"
-                  value={formData.raca_matriz}
-                  onChange={handleFieldChange}
-                >
-                  {speciesBreeds[formData.especie].female.map((breed) => (
+                Sexo
+                <select name="sexo" value={formData.sexo} onChange={handleFieldChange}>
+                  <option value="femea">Femea</option>
+                  <option value="macho">Macho</option>
+                </select>
+              </label>
+
+              <label>
+                Raca
+                <select name="raca" value={formData.raca} onChange={handleFieldChange}>
+                  {breedOptions.map((breed) => (
                     <option key={breed} value={breed}>
                       {breed}
                     </option>
@@ -140,133 +176,32 @@ export default function CadastroPage() {
               </label>
 
               <label>
-                Idade da matriz
+                Idade
                 <input
-                  name="idade_matriz"
+                  name="idade"
                   type="number"
                   step="0.1"
-                  value={formData.idade_matriz}
+                  value={formData.idade}
                   onChange={handleFieldChange}
                 />
               </label>
 
               <label>
-                Peso da matriz (kg)
+                Peso (kg)
                 <input
-                  name="peso_matriz_kg"
+                  name="peso_kg"
                   type="number"
-                  value={formData.peso_matriz_kg}
+                  value={formData.peso_kg}
                   onChange={handleFieldChange}
                 />
               </label>
 
               <label>
-                ECC da matriz
+                Filhos nascidos
                 <input
-                  name="ecc_matriz"
+                  name="filhos_nascidos"
                   type="number"
-                  step="0.1"
-                  min="1"
-                  max="5"
-                  value={formData.ecc_matriz}
-                  onChange={handleFieldChange}
-                />
-              </label>
-
-              <label>
-                Numero de partos
-                <input
-                  name="numero_partos_matriz"
-                  type="number"
-                  value={formData.numero_partos_matriz}
-                  onChange={handleFieldChange}
-                />
-              </label>
-
-              <label>
-                Abortos
-                <input
-                  name="abortos_matriz"
-                  type="number"
-                  value={formData.abortos_matriz}
-                  onChange={handleFieldChange}
-                />
-              </label>
-
-              <label>
-                Dias desde o ultimo parto
-                <input
-                  name="dias_desde_ultimo_parto"
-                  type="number"
-                  value={formData.dias_desde_ultimo_parto}
-                  onChange={handleFieldChange}
-                />
-              </label>
-
-              <label>
-                Filhos nascidos da matriz
-                <input
-                  name="filhos_nascidos_matriz"
-                  type="number"
-                  value={formData.filhos_nascidos_matriz}
-                  onChange={handleFieldChange}
-                />
-              </label>
-
-              <label>
-                Raca do macho de referencia
-                <select
-                  name="raca_macho"
-                  value={formData.raca_macho}
-                  onChange={handleFieldChange}
-                >
-                  {speciesBreeds[formData.especie].male.map((breed) => (
-                    <option key={breed} value={breed}>
-                      {breed}
-                    </option>
-                  ))}
-                </select>
-              </label>
-
-              <label>
-                Idade do macho de referencia
-                <input
-                  name="idade_macho"
-                  type="number"
-                  step="0.1"
-                  value={formData.idade_macho}
-                  onChange={handleFieldChange}
-                />
-              </label>
-
-              <label>
-                Peso do macho de referencia (kg)
-                <input
-                  name="peso_macho_kg"
-                  type="number"
-                  value={formData.peso_macho_kg}
-                  onChange={handleFieldChange}
-                />
-              </label>
-
-              <label>
-                Qualidade do semen
-                <input
-                  name="qualidade_semen_macho"
-                  type="number"
-                  min="1"
-                  max="5"
-                  value={formData.qualidade_semen_macho}
-                  onChange={handleFieldChange}
-                />
-              </label>
-
-              <label>
-                Filhos nascidos do macho
-                <input
-                  name="filhos_nascidos_macho"
-                  type="number"
-                  value={formData.filhos_nascidos_macho}
+                  value={formData.filhos_nascidos}
                   onChange={handleFieldChange}
                 />
               </label>
@@ -283,6 +218,65 @@ export default function CadastroPage() {
                   onChange={handleFieldChange}
                 />
               </label>
+
+              {formData.sexo === "femea" ? (
+                <>
+                  <label>
+                    ECC da matriz
+                    <input
+                      name="ecc"
+                      type="number"
+                      step="0.1"
+                      min="1"
+                      max="5"
+                      value={formData.ecc ?? 3.4}
+                      onChange={handleFieldChange}
+                    />
+                  </label>
+
+                  <label>
+                    Numero de partos
+                    <input
+                      name="numero_partos"
+                      type="number"
+                      value={formData.numero_partos ?? 0}
+                      onChange={handleFieldChange}
+                    />
+                  </label>
+
+                  <label>
+                    Abortos
+                    <input
+                      name="abortos"
+                      type="number"
+                      value={formData.abortos ?? 0}
+                      onChange={handleFieldChange}
+                    />
+                  </label>
+
+                  <label>
+                    Dias desde o ultimo parto
+                    <input
+                      name="dias_desde_ultimo_parto"
+                      type="number"
+                      value={formData.dias_desde_ultimo_parto ?? 120}
+                      onChange={handleFieldChange}
+                    />
+                  </label>
+                </>
+              ) : (
+                <label>
+                  Qualidade do semen
+                  <input
+                    name="qualidade_semen"
+                    type="number"
+                    min="1"
+                    max="5"
+                    value={formData.qualidade_semen ?? 3}
+                    onChange={handleFieldChange}
+                  />
+                </label>
+              )}
             </div>
 
             <button className="primary-button" type="submit">
@@ -294,36 +288,36 @@ export default function CadastroPage() {
         <article className="panel">
           <div className="panel-heading">
             <div>
-              <h2>Plantel cadastrado</h2>
-              <p>Resumo dos animais disponiveis para cruzamento e selecao genetica.</p>
+              <h2>Animais cadastrados</h2>
+              <p>Cada registro e individual e ja indica se o animal e macho ou femea.</p>
             </div>
           </div>
 
           <div className="animal-list">
             {animals.map((animal) => {
-              const preview = estimatePregnancyLocally(animal);
+              const preview = scoreAnimalReproductiveBase(animal);
               return (
                 <article className="animal-card" key={animal.id}>
                   <div className="animal-card-header">
                     <div>
                       <h3>{animal.nome}</h3>
                       <p>
-                        {animal.especie} - {animal.raca_matriz} x {animal.raca_macho}
+                        {animal.especie} - {animal.sexo} - {animal.raca}
                       </p>
                     </div>
-                    <span className={`prediction-tag ${preview.predictedClass ? "positive" : "neutral"}`}>
-                      {preview.predictedClass ? "Bom perfil" : "Atencao"}
+                    <span className={`prediction-tag ${preview >= 0.5 ? "positive" : "neutral"}`}>
+                      {animal.sexo === "femea" ? "Matriz" : "Reprodutor"}
                     </span>
                   </div>
 
                   <div className="animal-metrics">
                     <div>
-                      <span>Prenhez local</span>
-                      <strong>{formatPercent(preview.probability)}</strong>
+                      <span>Base reprodutiva</span>
+                      <strong>{formatPercent(preview)}</strong>
                     </div>
                     <div>
-                      <span>ECC</span>
-                      <strong>{animal.ecc_matriz.toFixed(1)}</strong>
+                      <span>Peso</span>
+                      <strong>{animal.peso_kg}</strong>
                     </div>
                     <div>
                       <span>Endogamia</span>

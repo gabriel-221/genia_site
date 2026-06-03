@@ -1,4 +1,4 @@
-import { AnimalRecord, GeneticGoal, RankedAnimal } from "@/lib/types";
+import { AnimalRecord, GeneticGoal, PregnancyInput, RankedAnimal } from "@/lib/types";
 
 const SPECIES_IDEAL_AGES = {
   Bovino: {
@@ -17,7 +17,7 @@ const SPECIES_IDEAL_AGES = {
 
 const GOAL_BREED_BONUS: Record<GeneticGoal, string[]> = {
   leite: ["Girolando", "Holandes", "Gir", "Saanen", "Toggenburg"],
-  corte: ["Angus", "Nelore", "Brahman", "Senepol", "Boer", "Dorper", "Texel"],
+  corte: ["Angus", "Nelore", "Boer", "Dorper", "Texel", "Morada Nova"],
   fertilidade: ["Gir", "Girolando", "Santa Ines", "Moxoto", "Anglo Nubiana"],
 };
 
@@ -36,40 +36,35 @@ function scoreRange(value: number, low: number, high: number) {
   return clamp(1 - distance, 0, 1);
 }
 
-function computeBreedBonus(animal: AnimalRecord, goal: GeneticGoal) {
-  const values = GOAL_BREED_BONUS[goal];
-  let total = 0;
-
-  if (values.includes(animal.raca_matriz)) {
-    total += 0.12;
-  }
-  if (values.includes(animal.raca_macho)) {
-    total += 0.08;
-  }
-
-  return total;
+function getAnimalBreed(animal: AnimalRecord) {
+  return animal.raca;
 }
 
-export function estimatePregnancyLocally(animal: AnimalRecord) {
-  const speciesAges = SPECIES_IDEAL_AGES[animal.especie];
+function computeBreedBonus(animal: AnimalRecord, goal: GeneticGoal) {
+  const values = GOAL_BREED_BONUS[goal];
+  return values.includes(getAnimalBreed(animal)) ? 0.18 : 0;
+}
 
-  const s_ecc = scoreRange(animal.ecc_matriz, 3.0, 3.75);
-  const s_parto = scoreRange(animal.dias_desde_ultimo_parto, 70, 160);
-  const s_semen = clamp((animal.qualidade_semen_macho - 1) / 4, 0, 1);
+export function estimatePregnancyLocally(input: PregnancyInput) {
+  const speciesAges = SPECIES_IDEAL_AGES[input.especie];
+
+  const s_ecc = scoreRange(input.ecc_matriz, 3.0, 3.75);
+  const s_parto = scoreRange(input.dias_desde_ultimo_parto, 70, 160);
+  const s_semen = clamp((input.qualidade_semen_macho - 1) / 4, 0, 1);
   const s_idade_f = scoreRange(
-    animal.idade_matriz,
+    input.idade_matriz,
     speciesAges.female[0],
     speciesAges.female[1],
   );
   const s_idade_m = scoreRange(
-    animal.idade_macho,
+    input.idade_macho,
     speciesAges.male[0],
     speciesAges.male[1],
   );
-  const s_filhos_macho = clamp(animal.filhos_nascidos_macho / 40, 0, 1);
-  const s_filhos_femea = clamp(animal.filhos_nascidos_matriz / 12, 0, 1);
-  const s_abortos = clamp(animal.abortos_matriz / 4, 0, 1);
-  const s_endogamia = clamp(animal.parentesco_endogamia, 0, 1);
+  const s_filhos_macho = clamp(input.filhos_nascidos_macho / 40, 0, 1);
+  const s_filhos_femea = clamp(input.filhos_nascidos_matriz / 12, 0, 1);
+  const s_abortos = clamp(input.abortos_matriz / 4, 0, 1);
+  const s_endogamia = clamp(input.parentesco_endogamia, 0, 1);
 
   const latentScore =
     -1.1 +
@@ -95,76 +90,97 @@ export function estimatePregnancyLocally(animal: AnimalRecord) {
 
 export function scoreAnimalReproductiveBase(animal: AnimalRecord) {
   const speciesAges = SPECIES_IDEAL_AGES[animal.especie];
-  const eccScore = clamp(animal.ecc_matriz / 5, 0, 1);
-  const semen = clamp(animal.qualidade_semen_macho / 5, 0, 1);
-  const prolificacy = clamp(animal.filhos_nascidos_matriz / 12, 0, 1);
   const fertilityPenalty = 1 - clamp(animal.parentesco_endogamia * 1.5, 0, 0.5);
-  const abortoPenalty = 1 - clamp(animal.abortos_matriz / 4, 0, 0.6);
-  const ageFemaleScore = scoreRange(
-    animal.idade_matriz,
-    speciesAges.female[0],
-    speciesAges.female[1],
-  );
+  const weightScore =
+    animal.sexo === "femea"
+      ? clamp(animal.peso_kg / 700, 0, 1)
+      : clamp(animal.peso_kg / 1100, 0, 1);
+
+  if (animal.sexo === "femea") {
+    const eccScore = clamp((animal.ecc ?? 3) / 5, 0, 1);
+    const prolificacy = clamp(animal.filhos_nascidos / 12, 0, 1);
+    const abortoPenalty = 1 - clamp((animal.abortos ?? 0) / 4, 0, 0.6);
+    const ageFemaleScore = scoreRange(
+      animal.idade,
+      speciesAges.female[0],
+      speciesAges.female[1],
+    );
+    const partoScore = scoreRange(animal.dias_desde_ultimo_parto ?? 120, 70, 160);
+
+    return clamp(
+      0.24 * eccScore +
+        0.18 * prolificacy +
+        0.16 * fertilityPenalty +
+        0.14 * abortoPenalty +
+        0.14 * partoScore +
+        0.08 * ageFemaleScore +
+        0.06 * weightScore,
+      0,
+      1,
+    );
+  }
+
+  const semen = clamp((animal.qualidade_semen ?? 3) / 5, 0, 1);
+  const offspring = clamp(animal.filhos_nascidos / 40, 0, 1);
   const ageMaleScore = scoreRange(
-    animal.idade_macho,
+    animal.idade,
     speciesAges.male[0],
     speciesAges.male[1],
   );
 
   return clamp(
-    0.24 * eccScore +
-      0.18 * semen +
-      0.18 * prolificacy +
-      0.16 * fertilityPenalty +
-      0.14 * abortoPenalty +
-      0.1 * ageFemaleScore +
-      0.1 * ageMaleScore,
+    0.34 * semen +
+      0.24 * offspring +
+      0.18 * fertilityPenalty +
+      0.14 * ageMaleScore +
+      0.1 * weightScore,
     0,
     1,
   );
 }
 
-export function scoreAnimalForGoal(
-  animal: AnimalRecord,
-  goal: GeneticGoal,
-) {
+export function scoreAnimalForGoal(animal: AnimalRecord, goal: GeneticGoal) {
   const breedBonus = computeBreedBonus(animal, goal);
-  const eccScore = clamp(animal.ecc_matriz / 5, 0, 1);
-  const femaleWeightScore = clamp(animal.peso_matriz_kg / 700, 0, 1);
-  const maleWeightScore = clamp(animal.peso_macho_kg / 1100, 0, 1);
-  const fertilityPenalty = 1 - clamp(animal.parentesco_endogamia * 1.5, 0, 0.5);
-  const abortoPenalty = 1 - clamp(animal.abortos_matriz / 4, 0, 0.6);
-  const prolificacy = clamp(animal.filhos_nascidos_matriz / 12, 0, 1);
-  const semen = clamp(animal.qualidade_semen_macho / 5, 0, 1);
   const reproductiveScore = scoreAnimalReproductiveBase(animal);
+  const weightScore =
+    animal.sexo === "femea"
+      ? clamp(animal.peso_kg / 700, 0, 1)
+      : clamp(animal.peso_kg / 1100, 0, 1);
+  const eccScore = clamp(((animal.ecc ?? 3) / 5), 0, 1);
+  const semen = clamp(((animal.qualidade_semen ?? 3) / 5), 0, 1);
+  const fertilityPenalty = 1 - clamp(animal.parentesco_endogamia * 1.5, 0, 0.5);
+  const prolificacy =
+    animal.sexo === "femea"
+      ? clamp(animal.filhos_nascidos / 12, 0, 1)
+      : clamp(animal.filhos_nascidos / 40, 0, 1);
 
   let baseScore = 0;
 
   if (goal === "leite") {
     baseScore =
-      0.35 * eccScore +
-      0.25 * prolificacy +
-      0.18 * reproductiveScore +
-      0.12 * femaleWeightScore +
-      0.1 * fertilityPenalty;
+      0.3 * reproductiveScore +
+      0.24 * eccScore +
+      0.2 * prolificacy +
+      0.14 * fertilityPenalty +
+      0.12 * weightScore;
   }
 
   if (goal === "corte") {
     baseScore =
-      0.35 * femaleWeightScore +
-      0.3 * maleWeightScore +
-      0.15 * eccScore +
-      0.1 * reproductiveScore +
-      0.1 * semen;
+      0.34 * weightScore +
+      0.24 * reproductiveScore +
+      0.16 * semen +
+      0.14 * prolificacy +
+      0.12 * eccScore;
   }
 
   if (goal === "fertilidade") {
     baseScore =
-      0.38 * reproductiveScore +
-      0.22 * eccScore +
-      0.16 * semen +
-      0.14 * abortoPenalty +
-      0.1 * fertilityPenalty;
+      0.42 * reproductiveScore +
+      0.2 * prolificacy +
+      0.18 * semen +
+      0.1 * fertilityPenalty +
+      0.1 * eccScore;
   }
 
   return clamp((baseScore + breedBonus) * 100, 0, 100);
@@ -183,10 +199,7 @@ export function getScoreLabel(score: number) {
   return "Monitorar";
 }
 
-export function rankAnimals(
-  animals: AnimalRecord[],
-  goal: GeneticGoal,
-) {
+export function rankAnimals(animals: AnimalRecord[], goal: GeneticGoal) {
   return [...animals]
     .map((animal) => {
       const reproductiveScore = scoreAnimalReproductiveBase(animal);

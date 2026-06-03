@@ -71,7 +71,7 @@ As colunas do dataset seguem a estrutura descrita no PDF:
 O processo de geracao segue a logica do relatorio tecnico:
 
 1. O script sorteia a `especie` entre bovino, ovino e caprino.
-2. A partir da especie, sorteia racas, faixas de idade, peso, partos, filhos e dias desde o ultimo parto de forma compativel com cada tipo animal.
+2. A partir da especie, sorteia racas, faixas de idade, peso, partos, filhos e dias desde o ultimo parto de forma compativel com cada tipo animal. Macho e femea compartilham o mesmo conjunto de racas disponiveis dentro de cada especie.
 3. Gera variaveis biologicas e reprodutivas centrais, como `ecc_matriz`, `qualidade_semen_macho`, `abortos_matriz` e `parentesco_endogamia`.
 4. Transforma essas informacoes em escores normalizados.
 5. Calcula uma variavel latente `z` com base em uma regressao logistica sintetica.

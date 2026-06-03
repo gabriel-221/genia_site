@@ -23,8 +23,8 @@ export default function PainelGeneticoPage() {
         <div className="hero-copy">
           <h1>Painel genetico por objetivo</h1>
           <p>
-            Escolha a caracteristica de interesse do produtor e veja quais animais do lote
-            apresentam melhor alinhamento com esse foco.
+            Compare machos e femeas individualmente conforme o objetivo do produtor, sem presumir
+            um cruzamento especifico.
           </p>
         </div>
 
@@ -57,7 +57,7 @@ export default function PainelGeneticoPage() {
         <div className="panel-heading split">
           <div>
             <h2>Ranking genetico</h2>
-            <p>Compare o potencial do plantel para leite, corte ou fertilidade sem usar previsao de cruzamento.</p>
+            <p>Compare o potencial individual para leite, corte ou fertilidade.</p>
           </div>
 
           <label className="goal-select">
@@ -76,7 +76,7 @@ export default function PainelGeneticoPage() {
         <div className="ranking-table">
           <div className="ranking-row ranking-head">
             <span>Animal</span>
-            <span>Combinacao genetica</span>
+            <span>Perfil individual</span>
             <span>Base reprodutiva</span>
             <span>Escore</span>
             <span>Leitura tecnica</span>
@@ -86,7 +86,7 @@ export default function PainelGeneticoPage() {
             <div className="ranking-row" key={`${selectedGoal}-${item.animal.id}`}>
               <span>{item.animal.nome}</span>
               <span>
-                {item.animal.raca_matriz} x {item.animal.raca_macho}
+                {item.animal.sexo} - {item.animal.raca}
               </span>
               <span>{(item.reproductiveScore * 100).toFixed(1)}</span>
               <span>{item.score.toFixed(1)}</span>

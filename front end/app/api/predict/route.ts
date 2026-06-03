@@ -1,11 +1,11 @@
 import { estimatePregnancyLocally } from "@/lib/scoring";
-import { AnimalRecord } from "@/lib/types";
+import { PregnancyInput } from "@/lib/types";
 import { spawn } from "node:child_process";
 import { resolve } from "node:path";
 
 export const runtime = "nodejs";
 
-async function runPythonPrediction(payload: AnimalRecord) {
+async function runPythonPrediction(payload: PregnancyInput) {
   const scriptPath = resolve(process.cwd(), "scripts", "predict_prenhez.py");
 
   return new Promise<string>((resolvePromise, rejectPromise) => {
@@ -44,7 +44,7 @@ async function runPythonPrediction(payload: AnimalRecord) {
 }
 
 export async function POST(request: Request) {
-  const payload = (await request.json()) as AnimalRecord;
+  const payload = (await request.json()) as PregnancyInput;
 
   try {
     const stdout = await runPythonPrediction(payload);

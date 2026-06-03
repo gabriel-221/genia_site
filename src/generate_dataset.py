@@ -9,8 +9,7 @@ import pandas as pd
 
 SPECIES_CONFIG = {
     "Bovino": {
-        "racas_femea": ["Nelore", "Girolando", "Holandes", "Angus", "Gir"],
-        "racas_macho": ["Nelore", "Angus", "Gir", "Brahman", "Senepol"],
+        "racas": ["Nelore", "Girolando", "Holandes", "Angus", "Gir"],
         "idade_femea": (2.0, 10.0),
         "idade_macho": (2.0, 9.0),
         "peso_femea": (350, 720),
@@ -23,8 +22,7 @@ SPECIES_CONFIG = {
         "idade_ideal_macho": (3.0, 8.0),
     },
     "Ovino": {
-        "racas_femea": ["Dorper", "Santa Ines", "Somalis", "Morada Nova", "Texel"],
-        "racas_macho": ["Dorper", "Texel", "Santa Ines", "Ile de France", "Suffolk"],
+        "racas": ["Dorper", "Santa Ines", "Somalis", "Morada Nova", "Texel"],
         "idade_femea": (1.2, 8.0),
         "idade_macho": (1.2, 7.0),
         "peso_femea": (35, 95),
@@ -37,8 +35,7 @@ SPECIES_CONFIG = {
         "idade_ideal_macho": (2.0, 6.5),
     },
     "Caprino": {
-        "racas_femea": ["Saanen", "Boer", "Anglo Nubiana", "Toggenburg", "Moxoto"],
-        "racas_macho": ["Boer", "Saanen", "Alpina", "Anglo Nubiana", "Toggenburg"],
+        "racas": ["Saanen", "Boer", "Anglo Nubiana", "Toggenburg", "Moxoto"],
         "idade_femea": (1.2, 8.5),
         "idade_macho": (1.2, 7.5),
         "peso_femea": (30, 85),
@@ -103,8 +100,8 @@ def build_dataset(rows: int, seed: int) -> pd.DataFrame:
     rng = np.random.default_rng(seed)
 
     especie = rng.choice(["Bovino", "Ovino", "Caprino"], size=rows, p=[0.5, 0.25, 0.25])
-    raca_matriz = sample_choices_by_species(especie, "racas_femea", rng)
-    raca_macho = sample_choices_by_species(especie, "racas_macho", rng)
+    raca_matriz = sample_choices_by_species(especie, "racas", rng)
+    raca_macho = sample_choices_by_species(especie, "racas", rng)
 
     idade_matriz = sample_by_species(especie, "idade_femea", rng, round_digits=1).astype(float)
     idade_macho = sample_by_species(especie, "idade_macho", rng, round_digits=1).astype(float)

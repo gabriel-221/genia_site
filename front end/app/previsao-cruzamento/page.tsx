@@ -1,9 +1,45 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useAnimalStore } from "@/lib/animal-store";
 import { buildCrossingPayload, formatPercent, requestPrediction } from "@/lib/prediction";
-import { PredictionResult } from "@/lib/types";
+import { PredictionResult, PregnancyInput } from "@/lib/types";
+
+const examplePayload: PregnancyInput = {
+  especie: "Bovino",
+  raca_matriz: "Girolando",
+  idade_matriz: 4.8,
+  peso_matriz_kg: 510,
+  ecc_matriz: 3.5,
+  numero_partos_matriz: 2,
+  abortos_matriz: 0,
+  dias_desde_ultimo_parto: 118,
+  filhos_nascidos_matriz: 2,
+  raca_macho: "Gir",
+  idade_macho: 4.7,
+  peso_macho_kg: 760,
+  qualidade_semen_macho: 5,
+  filhos_nascidos_macho: 18,
+  parentesco_endogamia: 0.04,
+};
+
+const requiredJsonFields: Array<keyof PregnancyInput> = [
+  "especie",
+  "raca_matriz",
+  "idade_matriz",
+  "peso_matriz_kg",
+  "ecc_matriz",
+  "numero_partos_matriz",
+  "abortos_matriz",
+  "dias_desde_ultimo_parto",
+  "filhos_nascidos_matriz",
+  "raca_macho",
+  "idade_macho",
+  "peso_macho_kg",
+  "qualidade_semen_macho",
+  "filhos_nascidos_macho",
+  "parentesco_endogamia",
+];
 
 export default function PrevisaoCruzamentoPage() {
   const { animals, isHydrated } = useAnimalStore();
@@ -12,24 +48,49 @@ export default function PrevisaoCruzamentoPage() {
   const [crossingResult, setCrossingResult] = useState<PredictionResult | null>(null);
   const [crossingLabel, setCrossingLabel] = useState("");
   const [isCrossingLoading, setIsCrossingLoading] = useState(false);
+  const [jsonInput, setJsonInput] = useState("");
+  const [jsonError, setJsonError] = useState("");
+
+  const femaleAnimals = useMemo(
+    () => animals.filter((animal) => animal.sexo === "femea"),
+    [animals],
+  );
+  const maleAnimals = useMemo(
+    () => animals.filter((animal) => animal.sexo === "macho"),
+    [animals],
+  );
 
   const crossingFemale = useMemo(
-    () => animals.find((animal) => animal.id === crossingFemaleId) ?? animals[0] ?? null,
-    [animals, crossingFemaleId],
+    () => femaleAnimals.find((animal) => animal.id === crossingFemaleId) ?? femaleAnimals[0] ?? null,
+    [femaleAnimals, crossingFemaleId],
   );
   const crossingMale = useMemo(
-    () => animals.find((animal) => animal.id === crossingMaleId) ?? animals[1] ?? animals[0] ?? null,
-    [animals, crossingMaleId],
+    () => maleAnimals.find((animal) => animal.id === crossingMaleId) ?? maleAnimals[0] ?? null,
+    [maleAnimals, crossingMaleId],
   );
 
   const crossingSpeciesMismatch =
     crossingFemale !== null &&
     crossingMale !== null &&
     crossingFemale.especie !== crossingMale.especie;
-  const crossingSameSelection =
-    crossingFemale !== null &&
-    crossingMale !== null &&
-    crossingFemale.id === crossingMale.id;
+
+  useEffect(() => {
+    if (!crossingFemale || !crossingMale || crossingSpeciesMismatch) {
+      setJsonInput(JSON.stringify(examplePayload, null, 2));
+      return;
+    }
+
+    const payload = buildCrossingPayload(crossingFemale, crossingMale);
+    setJsonInput(JSON.stringify(payload, null, 2));
+  }, [crossingFemale, crossingMale, crossingSpeciesMismatch]);
+
+  function validatePregnancyInput(payload: PregnancyInput) {
+    for (const field of requiredJsonFields) {
+      if (!(field in payload)) {
+        throw new Error(`Campo obrigatorio ausente: ${field}`);
+      }
+    }
+  }
 
   async function estimateCrossing() {
     if (!crossingFemale || !crossingMale || crossingSpeciesMismatch) {
@@ -43,9 +104,46 @@ export default function PrevisaoCruzamentoPage() {
       const result = await requestPrediction(payload);
       setCrossingResult(result);
       setCrossingLabel(`${crossingFemale.nome} x ${crossingMale.nome}`);
+      setJsonError("");
     } finally {
       setIsCrossingLoading(false);
     }
+  }
+
+  async function estimateJsonInput() {
+    setJsonError("");
+    setIsCrossingLoading(true);
+
+    try {
+      const parsedPayload = JSON.parse(jsonInput) as PregnancyInput;
+      validatePregnancyInput(parsedPayload);
+      const result = await requestPrediction(parsedPayload);
+      setCrossingResult(result);
+      setCrossingLabel("Inferencia via JSON");
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "O JSON informado nao e valido para inferencia.";
+      setJsonError(`${message} Revise a estrutura e tente novamente.`);
+    } finally {
+      setIsCrossingLoading(false);
+    }
+  }
+
+  function refreshJsonFromSelectedAnimals() {
+    if (!crossingFemale || !crossingMale || crossingSpeciesMismatch) {
+      return;
+    }
+
+    const payload = buildCrossingPayload(crossingFemale, crossingMale);
+    setJsonInput(JSON.stringify(payload, null, 2));
+    setJsonError("");
+  }
+
+  function loadExampleJson() {
+    setJsonInput(JSON.stringify(examplePayload, null, 2));
+    setJsonError("");
   }
 
   return (
@@ -54,28 +152,28 @@ export default function PrevisaoCruzamentoPage() {
         <div className="hero-copy">
           <h1>Previsao de cruzamento</h1>
           <p>
-            Escolha dois animais cadastrados, monte o par reprodutivo e envie a combinacao para o
-            modelo de prenhez.
+            Escolha uma femea para matriz e um macho para reprodutor. O sistema monta a entrada do
+            modelo com esse par individual.
           </p>
         </div>
 
         <div className="hero-grid">
           <article className="metric-card spotlight">
-            <span>Animais prontos para combinar</span>
-            <strong>{isHydrated ? animals.length : "..."}</strong>
-            <p>O cruzamento usa os animais cadastrados na pagina de cadastro.</p>
+            <span>Femeas disponiveis</span>
+            <strong>{isHydrated ? femaleAnimals.length : "..."}</strong>
+            <p>Somente femeas aparecem no seletor de matriz.</p>
           </article>
 
           <article className="metric-card">
-            <span>Matriz selecionada</span>
-            <strong>{crossingFemale?.nome ?? "Selecione"}</strong>
-            <p>{crossingFemale ? `${crossingFemale.raca_matriz} • ${crossingFemale.especie}` : "Escolha o primeiro animal."}</p>
+            <span>Machos disponiveis</span>
+            <strong>{isHydrated ? maleAnimals.length : "..."}</strong>
+            <p>Somente machos aparecem no seletor de reprodutor.</p>
           </article>
 
           <article className="metric-card">
-            <span>Macho selecionado</span>
-            <strong>{crossingMale?.nome ?? "Selecione"}</strong>
-            <p>{crossingMale ? `${crossingMale.raca_matriz} • ${crossingMale.especie}` : "Escolha o segundo animal."}</p>
+            <span>Regra do cruzamento</span>
+            <strong>1 femea + 1 macho</strong>
+            <p>O par precisa ser da mesma especie para alimentar o modelo de prenhez.</p>
           </article>
         </div>
       </section>
@@ -84,7 +182,7 @@ export default function PrevisaoCruzamentoPage() {
         <div className="panel-heading split">
           <div>
             <h2>Montar cruzamento</h2>
-            <p>O primeiro animal entra como matriz e o segundo como macho na inferencia.</p>
+            <p>Selecione a matriz e o reprodutor para preencher o modelo de inferencia.</p>
           </div>
 
           <button
@@ -95,9 +193,9 @@ export default function PrevisaoCruzamentoPage() {
               isCrossingLoading ||
               !crossingFemale ||
               !crossingMale ||
-              crossingSameSelection ||
               crossingSpeciesMismatch ||
-              animals.length < 2
+              femaleAnimals.length < 1 ||
+              maleAnimals.length < 1
             }
           >
             {isCrossingLoading ? "Calculando..." : "Executar cruzamento"}
@@ -106,45 +204,39 @@ export default function PrevisaoCruzamentoPage() {
 
         <div className="crossing-grid">
           <label>
-            Animal 1 (matriz)
+            Femea (matriz)
             <select
               value={crossingFemale?.id ?? ""}
               onChange={(event) => setCrossingFemaleId(event.target.value)}
-              disabled={animals.length === 0}
+              disabled={femaleAnimals.length === 0}
             >
-              {animals.map((animal) => (
+              {femaleAnimals.map((animal) => (
                 <option key={`female-${animal.id}`} value={animal.id}>
-                  {animal.nome} - {animal.especie}
+                  {animal.nome} - {animal.especie} - {animal.raca}
                 </option>
               ))}
             </select>
           </label>
 
           <label>
-            Animal 2 (macho)
+            Macho (reprodutor)
             <select
               value={crossingMale?.id ?? ""}
               onChange={(event) => setCrossingMaleId(event.target.value)}
-              disabled={animals.length === 0}
+              disabled={maleAnimals.length === 0}
             >
-              {animals.map((animal) => (
+              {maleAnimals.map((animal) => (
                 <option key={`male-${animal.id}`} value={animal.id}>
-                  {animal.nome} - {animal.especie}
+                  {animal.nome} - {animal.especie} - {animal.raca}
                 </option>
               ))}
             </select>
           </label>
         </div>
 
-        {animals.length < 2 ? (
+        {femaleAnimals.length < 1 || maleAnimals.length < 1 ? (
           <p className="crossing-warning">
-            Cadastre pelo menos dois animais para usar a previsao de cruzamento.
-          </p>
-        ) : null}
-
-        {crossingSameSelection ? (
-          <p className="crossing-warning">
-            Escolha dois animais diferentes para realizar o cruzamento.
+            Cadastre pelo menos uma femea e um macho para usar a previsao de cruzamento.
           </p>
         ) : null}
 
@@ -160,17 +252,15 @@ export default function PrevisaoCruzamentoPage() {
               <span>Matriz escolhida</span>
               <strong>{crossingFemale.nome}</strong>
               <p>
-                {crossingFemale.raca_matriz} • {crossingFemale.idade_matriz.toFixed(1)} anos •{" "}
-                {crossingFemale.peso_matriz_kg} kg
+                {crossingFemale.raca} - {crossingFemale.idade.toFixed(1)} anos - {crossingFemale.peso_kg} kg
               </p>
             </div>
 
             <div>
-              <span>Macho escolhido</span>
+              <span>Reprodutor escolhido</span>
               <strong>{crossingMale.nome}</strong>
               <p>
-                {crossingMale.raca_matriz} • {crossingMale.idade_matriz.toFixed(1)} anos •{" "}
-                {crossingMale.peso_matriz_kg} kg
+                {crossingMale.raca} - {crossingMale.idade.toFixed(1)} anos - {crossingMale.peso_kg} kg
               </p>
             </div>
           </div>
@@ -187,6 +277,59 @@ export default function PrevisaoCruzamentoPage() {
             </p>
           </article>
         ) : null}
+      </section>
+
+      <section className="panel crossing-panel">
+        <div className="panel-heading split">
+          <div>
+            <h2>Inferencia por JSON</h2>
+            <p>
+              Preencha ou cole um JSON no formato do modelo. Voce pode usar o casal selecionado
+              acima como ponto de partida.
+            </p>
+          </div>
+
+          <div className="json-actions">
+            <button
+              className="ghost-button"
+              onClick={loadExampleJson}
+              type="button"
+            >
+              Carregar exemplo
+            </button>
+
+            <button
+              className="secondary-button"
+              onClick={refreshJsonFromSelectedAnimals}
+              type="button"
+              disabled={!crossingFemale || !crossingMale || crossingSpeciesMismatch}
+            >
+              Gerar JSON do casal
+            </button>
+
+            <button
+              className="primary-button"
+              onClick={estimateJsonInput}
+              type="button"
+              disabled={isCrossingLoading || !jsonInput.trim()}
+            >
+              {isCrossingLoading ? "Inferindo..." : "Inferir JSON"}
+            </button>
+          </div>
+        </div>
+
+        <label className="json-editor-label">
+          JSON de inferencia
+          <textarea
+            className="json-editor"
+            value={jsonInput}
+            onChange={(event) => setJsonInput(event.target.value)}
+            spellCheck={false}
+            rows={16}
+          />
+        </label>
+
+        {jsonError ? <p className="crossing-warning">{jsonError}</p> : null}
       </section>
     </main>
   );

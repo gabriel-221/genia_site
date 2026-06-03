@@ -14,7 +14,13 @@ from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import OneHotEncoder
 
 
-def build_pipeline(X: pd.DataFrame, n_jobs: int, n_estimators: int) -> Pipeline:
+def build_pipeline(
+    X: pd.DataFrame,
+    n_jobs: int,
+    n_estimators: int,
+    max_depth: int | None,
+    min_samples_leaf: int,
+) -> Pipeline:
     numeric_features = X.select_dtypes(include="number").columns.tolist()
     categorical_features = X.select_dtypes(exclude="number").columns.tolist()
 
@@ -37,12 +43,12 @@ def build_pipeline(X: pd.DataFrame, n_jobs: int, n_estimators: int) -> Pipeline:
 
     model = RandomForestClassifier(
         n_estimators=n_estimators,
-        max_depth=None,
+        max_depth=max_depth,
         min_samples_split=2,
-        min_samples_leaf=1,
+        min_samples_leaf=min_samples_leaf,
         random_state=42,
         n_jobs=n_jobs,
-        class_weight="balanced",
+        class_weight="balanced_subsample",
     )
 
     return Pipeline(steps=[("preprocessor", preprocessor), ("model", model)])
@@ -63,6 +69,7 @@ def write_metrics(
     predictions: pd.Series,
     prediction_probabilities: pd.Series,
     reports_dir: Path,
+    model_summary: dict[str, str | int | None],
 ) -> None:
     accuracy = accuracy_score(y_test, predictions)
     matrix = confusion_matrix(y_test, predictions)
@@ -75,6 +82,12 @@ def write_metrics(
 
     content = "\n".join(
         [
+            "Model configuration:",
+            f"n_estimators: {model_summary['n_estimators']}",
+            f"max_depth: {model_summary['max_depth']}",
+            f"min_samples_leaf: {model_summary['min_samples_leaf']}",
+            f"class_weight: {model_summary['class_weight']}",
+            "",
             "Pregnancy rate summary:",
             f"Observed pregnancy rate (full dataset): {observed_rate_full:.4%}",
             f"Observed pregnancy rate (train split): {observed_rate_train:.4%}",
@@ -96,7 +109,6 @@ def write_metrics(
 
 def write_feature_importance(
     pipeline: Pipeline,
-    X_train: pd.DataFrame,
     reports_dir: Path,
 ) -> None:
     preprocessor: ColumnTransformer = pipeline.named_steps["preprocessor"]
@@ -111,6 +123,22 @@ def write_feature_importance(
     ).sort_values("importance", ascending=False)
 
     importance_df.to_csv(reports_dir / "feature_importance.csv", index=False)
+
+    aggregated_feature_names = (
+        importance_df["feature"]
+        .str.replace(r"^(num__|cat__)", "", regex=True)
+        .str.replace(r"_[^_]+$", "", regex=True)
+    )
+    aggregated_importance_df = (
+        importance_df.assign(base_feature=aggregated_feature_names)
+        .groupby("base_feature", as_index=False)["importance"]
+        .sum()
+        .sort_values("importance", ascending=False)
+    )
+    aggregated_importance_df.to_csv(
+        reports_dir / "feature_importance_aggregated.csv",
+        index=False,
+    )
 
 
 def main() -> None:
@@ -142,8 +170,20 @@ def main() -> None:
     parser.add_argument(
         "--n-estimators",
         type=int,
-        default=120,
+        default=300,
         help="Number of trees used by Random Forest.",
+    )
+    parser.add_argument(
+        "--max-depth",
+        type=int,
+        default=40,
+        help="Maximum tree depth used by Random Forest. Use 0 for no limit.",
+    )
+    parser.add_argument(
+        "--min-samples-leaf",
+        type=int,
+        default=6,
+        help="Minimum samples required in each tree leaf.",
     )
     parser.add_argument(
         "--drop-columns",
@@ -170,6 +210,7 @@ def main() -> None:
     X = df.drop(columns=[column for column in columns_to_drop if column in df.columns])
     X = cast_numeric_columns(X)
     y = df[args.target]
+    max_depth = None if args.max_depth == 0 else args.max_depth
 
     X_train, X_test, y_train, y_test = train_test_split(
         X,
@@ -179,7 +220,13 @@ def main() -> None:
         stratify=y if y.nunique() > 1 else None,
     )
 
-    pipeline = build_pipeline(X, n_jobs=args.n_jobs, n_estimators=args.n_estimators)
+    pipeline = build_pipeline(
+        X,
+        n_jobs=args.n_jobs,
+        n_estimators=args.n_estimators,
+        max_depth=max_depth,
+        min_samples_leaf=args.min_samples_leaf,
+    )
     pipeline.fit(X_train, y_train)
 
     predictions = pipeline.predict(X_test)
@@ -191,8 +238,14 @@ def main() -> None:
         predictions=predictions,
         prediction_probabilities=pd.Series(prediction_probabilities),
         reports_dir=reports_dir,
+        model_summary={
+            "n_estimators": args.n_estimators,
+            "max_depth": max_depth,
+            "min_samples_leaf": args.min_samples_leaf,
+            "class_weight": "balanced_subsample",
+        },
     )
-    write_feature_importance(pipeline, X_train, reports_dir)
+    write_feature_importance(pipeline, reports_dir)
 
     model_path = models_dir / "random_forest_prenhez.onnx"
     model_onnx = to_onnx(
