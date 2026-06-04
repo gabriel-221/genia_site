@@ -1,11 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
 
 export async function POST(req: NextRequest) {
-  const supabase = createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-
   const { mensagem, historico, resumoRebanho } = await req.json()
   if (!mensagem) return NextResponse.json({ error: 'mensagem required' }, { status: 400 })
 
@@ -21,9 +16,10 @@ ${resumoRebanho || 'Nenhum dado disponível'}
 - Responda SEMPRE em português brasileiro
 - Seja direto e prático, como um zootecnista experiente
 - Use os dados acima para personalizar as respostas
-- Para cálculos, mostre o raciocínio passo a passo
-- Em caso de dúvida sobre saúde animal, recomende consulta veterinária
-- Seja objetivo, máximo 3-4 parágrafos por resposta`
+- NÃO use formatação Markdown: sem asteriscos, hashtags, underlines ou backticks
+- Responda apenas com texto puro e parágrafos simples
+- Máximo 3 parágrafos por resposta
+- Em caso de dúvida sobre saúde animal, recomende consulta veterinária`
 
   const messages = [
     ...(historico ?? []),
@@ -48,13 +44,15 @@ ${resumoRebanho || 'Nenhum dado disponível'}
 
     if (!res.ok) {
       const err = await res.text()
-      return NextResponse.json({ error: err }, { status: res.status })
+      console.error('Claude API error:', res.status, err)
+      return NextResponse.json({ error: `Erro na IA (${res.status}). Tente novamente.` }, { status: res.status })
     }
 
     const data = await res.json()
     const text = data.content?.[0]?.text ?? 'Erro ao processar resposta.'
     return NextResponse.json({ resposta: text })
   } catch (e) {
+    console.error('Copilot fetch error:', e)
     return NextResponse.json({ error: 'Erro de conexão com a IA.' }, { status: 500 })
   }
 }

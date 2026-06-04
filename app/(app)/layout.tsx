@@ -1,14 +1,14 @@
 'use client'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { LayoutDashboard, PawPrint, Dna, Sparkles, BarChart3, Calendar } from '@/components/Icons'
+import { LayoutDashboard, PawPrint, Dna, Sparkles, BarChart3, Heart } from '@/components/Icons'
 
 const NAV = [
   { href: '/dashboard',  icon: LayoutDashboard, label: 'Dashboard' },
   { href: '/animais',    icon: PawPrint,         label: 'Animais'   },
+  { href: '/prenhez',    icon: Heart,            label: 'Prenhez'   },
   { href: '/match',      icon: Dna,              label: 'Match'     },
   { href: '/copilot',    icon: Sparkles,         label: 'Copilot'   },
-  { href: '/relatorios', icon: BarChart3,        label: 'Relatórios'},
 ]
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {

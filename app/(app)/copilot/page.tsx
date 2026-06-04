@@ -38,7 +38,7 @@ export default function CopilotPage() {
       const prenhas = anim.filter((a: Animal) => a.prenhou).length
       const msg = total === 0
         ? 'Olá! Sou o GENIA Copilot. Cadastre seus animais para eu poder dar recomendações personalizadas. Como posso ajudar?'
-        : `Olá! Sou o GENIA Copilot. Identifiquei **${total} animais** no seu rebanho (${femeas} fêmeas, ${prenhas} gestantes). Como posso ajudar você hoje?`
+        : `Olá! Sou o GENIA Copilot. Identifiquei ${total} animais no seu rebanho (${femeas} fêmeas, ${prenhas} gestantes). Como posso ajudar você hoje?`
 
       setMsgs([{ role: 'assistant', content: msg }])
     }
