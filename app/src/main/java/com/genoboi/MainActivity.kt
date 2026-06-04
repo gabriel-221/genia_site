@@ -57,18 +57,7 @@ fun GenoApp(modelHelper: PrenhezModelHelper?) {
     var isLogado by remember { mutableStateOf(SupabaseConfig.isLogado(context)) }
 
     if (!isLogado) {
-        var showCadastro by remember { mutableStateOf(false) }
-        if (showCadastro) {
-            CadastroUsuarioScreen(
-                onVoltar     = { showCadastro = false },
-                onCadastrado = { isLogado = true }
-            )
-        } else {
-            LoginScreen(
-                onLoginSucesso = { isLogado = true },
-                onCriarConta   = { showCadastro = true }
-            )
-        }
+        LoginScreen(onLoginSucesso = { isLogado = true })
     } else {
         AppPrincipal(
             modelHelper = modelHelper,

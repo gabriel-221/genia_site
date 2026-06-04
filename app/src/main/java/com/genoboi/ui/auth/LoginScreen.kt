@@ -30,7 +30,7 @@ import kotlinx.coroutines.launch
 @Composable
 fun LoginScreen(
     onLoginSucesso: () -> Unit,
-    onCriarConta: () -> Unit
+    onCriarConta: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val db = remember { AppDatabase.getInstance(context) }
@@ -208,18 +208,25 @@ fun LoginScreen(
 
             Spacer(Modifier.height(24.dp))
 
-            // Criar conta
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("Primeiro acesso? ", color = GenoWhite, fontSize = 14.sp)
-                TextButton(
-                    onClick        = onCriarConta,
-                    contentPadding = PaddingValues(0.dp)
-                ) {
+            // Credenciais de demonstração
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape    = RoundedCornerShape(12.dp),
+                colors   = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.12f))
+            ) {
+                Column(Modifier.padding(14.dp)) {
                     Text(
-                        "Criar conta",
-                        color      = Color(0xFF80CBC4),
-                        fontWeight = FontWeight.Bold,
-                        fontSize   = 14.sp
+                        "Contas de demonstração:",
+                        color      = Color.White.copy(alpha = 0.9f),
+                        fontSize   = 12.sp,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        "produtor1@teste.com  •  senha: Teste@123\nprodutor2@teste.com  •  senha: Teste@123",
+                        color    = Color.White.copy(alpha = 0.75f),
+                        fontSize = 11.sp,
+                        lineHeight = 18.sp
                     )
                 }
             }
