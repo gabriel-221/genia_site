@@ -142,14 +142,14 @@ class AnimalRepository(
                         supabaseId = produtorDto.id ?: "",
                         userId = user.id,
                         email = user.email ?: "",
-                        senhaHash = "", // não guardamos senha na sync
+                        senhaHash = "", 
                         nome = produtorDto.nome,
                         nomeFazenda = produtorDto.nomeFazenda ?: "",
                         municipio = produtorDto.municipio,
                         estado = produtorDto.estado
                     )
                     animalDao.salvarProdutor(entity)
-                    Log.d("Supabase", "Perfil local atualizado: ${produtorDto.nome}")
+                    Log.d("Supabase", "Perfil Sincronizado do Servidor: ${produtorDto.nome} (ID=${produtorDto.id})")
                 }
             }
         } catch (e: Exception) {

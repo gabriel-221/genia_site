@@ -103,17 +103,21 @@ class SupabaseRepository(private val context: Context) {
         }
     }
 
-    // Lista os animais do produtor logado.
-    // Com RLS ativo: retorna os do produtor + animais com disponivel_match=true de outros.
-    // Com RLS desativado (hackathon): retorna pelo filtro de produtor_id.
     suspend fun listarAnimais(): List<AnimalDto> {
         val produtorId = getProdutorId() ?: return emptyList()
         return try {
-            // Tenta buscar por produtor_id (funciona com ou sem RLS)
+            // Tenta buscar animais por qualquer uma das colunas possíveis de ID
             val lista = client.from("genia_animal")
-                .select { filter { eq("produtor_id", produtorId) } }
+                .select { 
+                    filter { 
+                        or {
+                            eq("produtor_id", produtorId)
+                            eq("produtor_supabase_id", produtorId)
+                        }
+                    } 
+                }
                 .decodeList<AnimalDto>()
-            Log.d("Supabase", "listarAnimais: ${lista.size} animais para produtorId=$produtorId")
+            Log.d("Supabase", "listarAnimais: ${lista.size} animais encontrados.")
             lista
         } catch (e: Exception) {
             Log.e("Supabase", "Erro ao listar animais: ${e.message}")
