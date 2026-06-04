@@ -54,7 +54,7 @@ fun AiCopilotScreen(repository: AnimalRepository) {
         historico.add(
             ChatMessage(
                 role = "assistant",
-                content = "Olá! Sou o GENIA Copilot, seu assistente de manejo genético e reprodutivo.\n\nIdentifiquei **${animais.size} animais** no seu rebanho. Como posso ajudar você hoje?"
+                content = "Olá! Sou o GENIA Copilot, seu assistente de manejo genético e reprodutivo.\n\nIdentifiquei ${animais.size} animais no seu rebanho. Como posso ajudar você hoje?"
             )
         )
     }

@@ -43,7 +43,7 @@ class AiCopilotRepository {
             })
 
             val body = JSONObject().apply {
-                put("model", "claude-haiku-4-5-20251001")
+                put("model", "claude-3-haiku-20240307")
                 put("max_tokens", 1024)
                 put("system", systemPrompt)
                 put("messages", messages)
@@ -51,7 +51,7 @@ class AiCopilotRepository {
 
             val request = Request.Builder()
                 .url("https://api.anthropic.com/v1/messages")
-                .addHeader("x-api-key", BuildConfig.CLAUDE_API_KEY)
+                .addHeader("x-api-key", BuildConfig.CLAUDE_API_KEY.ifEmpty { "placeholder_key" })
                 .addHeader("anthropic-version", "2023-06-01")
                 .addHeader("content-type", "application/json")
                 .post(body.toRequestBody("application/json".toMediaType()))
@@ -62,7 +62,10 @@ class AiCopilotRepository {
 
             if (!response.isSuccessful) {
                 Log.e("Copilot", "Erro API: ${response.code} $responseBody")
-                return@withContext Result.failure(Exception("Erro ${response.code}: tente novamente."))
+                val errorMsg = if (BuildConfig.CLAUDE_API_KEY.isEmpty()) 
+                    "Configuração incompleta: Chave da IA não encontrada no arquivo local.properties."
+                else "Erro na IA (${response.code}). Tente novamente mais tarde."
+                return@withContext Result.failure(Exception(errorMsg))
             }
 
             val text = JSONObject(responseBody)
@@ -107,12 +110,13 @@ Primeiros animais cadastrados:
 $topAnimais
 
 === INSTRUÇÕES ===
-- Responda SEMPRE em português brasileiro
-- Seja direto e prático, como um zootecnista experiente
-- Use os dados acima para personalizar as respostas
-- Se perguntado sobre um animal específico, use os dados fornecidos
-- Para cálculos, mostre o raciocínio passo a passo
-- Em caso de dúvida sobre saúde animal, recomende consulta veterinária
+- Responda SEMPRE em português brasileiro.
+- Seja direto e prático, como um zootecnista experiente.
+- Use os dados acima para personalizar as respostas.
+- Se perguntado sobre um animal específico, use os dados fornecidos.
+- IMPORTANTE: Não use nenhuma formatação Markdown (como asteriscos para negrito, hashtags para títulos ou listas com hifens). Responda apenas com texto puro, limpo e parágrafos simples.
+- Para cálculos, mostre o raciocínio de forma textual e simples.
+- Em caso de dúvida sobre saúde animal, recomende consulta veterinária.
         """.trimIndent()
     }
 }
