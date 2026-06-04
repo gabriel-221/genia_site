@@ -237,13 +237,30 @@ private suspend fun enviar(
 
     result.fold(
         onSuccess = { resposta ->
-            historico.add(ChatMessage(role = "assistant", content = resposta))
+            historico.add(ChatMessage(role = "assistant", content = limparMarkdown(resposta)))
         },
         onFailure = { err ->
             historico.add(ChatMessage(role = "assistant", content = "Desculpe, ocorreu um erro: ${err.message}. Verifique sua conexão e tente novamente."))
         }
     )
     onStateChange(false)
+}
+
+// Remove formatação markdown para exibir texto limpo no chat
+fun limparMarkdown(texto: String): String {
+    return texto
+        .replace(Regex("#{1,6}\\s*"), "")          // # Títulos
+        .replace(Regex("\\*\\*(.+?)\\*\\*"), "$1")  // **negrito**
+        .replace(Regex("\\*(.+?)\\*"), "$1")         // *itálico*
+        .replace(Regex("__(.+?)__"), "$1")           // __negrito__
+        .replace(Regex("_(.+?)_"), "$1")             // _itálico_
+        .replace(Regex("`{1,3}[^`]*`{1,3}"), "")    // `código`
+        .replace(Regex("^[-*+]\\s+", RegexOption.MULTILINE), "• ") // listas
+        .replace(Regex("^\\d+\\.\\s+", RegexOption.MULTILINE), "• ") // listas numeradas
+        .replace(Regex("\\[(.+?)\\]\\(.+?\\)"), "$1") // [links](url)
+        .replace(Regex("---+"), "")                  // separadores
+        .replace(Regex("\\n{3,}"), "\n\n")           // múltiplas linhas em branco
+        .trim()
 }
 
 @Composable
