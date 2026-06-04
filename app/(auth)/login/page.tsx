@@ -92,11 +92,21 @@ export default function LoginPage() {
       {/* Demo hint */}
       <div className="mt-6 w-full max-w-sm bg-white/10 rounded-2xl p-4 text-center">
         <p className="text-white/80 text-xs font-semibold mb-1">Contas de demonstração</p>
-        <p className="text-white/60 text-xs">produtor1@teste.com • Teste@123</p>
-        <p className="text-white/60 text-xs">produtor4@teste.com • Teste@123</p>
+        <p className="text-white/60 text-xs">produtor1@teste.com • senha123</p>
+        <p className="text-white/60 text-xs">produtor4@teste.com • senha123</p>
       </div>
 
-      <p className="text-green-700 text-xs mt-8">GNU GPL v3.0 · GENIA 2026</p>
+      {/* LGPD */}
+      <div className="mt-6 w-full max-w-sm text-center px-2">
+        <p className="text-green-600 text-[10px] leading-relaxed">
+          Os dados coletados são tratados conforme a{' '}
+          <strong className="text-green-500">Lei 13.709/2018 (LGPD)</strong> e utilizados
+          exclusivamente para gestão do rebanho. O produtor é titular e responsável pelos
+          seus dados. Armazenamento seguro com isolamento por produtor via Row Level Security.
+        </p>
+      </div>
+
+      <p className="text-green-700 text-xs mt-4">GNU GPL v3.0 · GENIA 2026</p>
     </div>
   )
 }

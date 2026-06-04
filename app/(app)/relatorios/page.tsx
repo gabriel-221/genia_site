@@ -6,6 +6,36 @@ import { ESPECIE_EMOJI, ESPECIE_LABEL } from '@/types'
 import { ArrowLeft } from '@/components/Icons'
 import { useRouter } from 'next/navigation'
 
+function exportarCSV(animais: Animal[]) {
+  const cabecalho = [
+    'Nome','Espécie','Raça','Sexo','Nascimento','Peso (kg)','ECC','Fazenda',
+    'Partos','Abortos','Filhos','Prod. Leite (L/dia)','Qld. Sêmen','Gestante','GeneMatch'
+  ].join(';')
+
+  const linhas = animais.map(a => [
+    a.nome, a.especie, a.raca, a.sexo,
+    a.data_nascimento ?? '',
+    a.peso_kg ?? '',
+    a.escore_corporal ?? '',
+    a.fazenda,
+    a.numero_partos,
+    a.abortos,
+    a.filhos_matriz || a.filhos_macho,
+    a.producao_leite_diaria ?? 0,
+    a.qualidade_semen ?? '',
+    a.prenhou ? 'Sim' : 'Não',
+    a.disponivel_match ? 'Sim' : 'Não',
+  ].join(';')).join('\n')
+
+  const blob = new Blob(['﻿' + cabecalho + '\n' + linhas], { type: 'text/csv;charset=utf-8;' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `genia_rebanho_${new Date().toISOString().slice(0,10)}.csv`
+  a.click()
+  URL.revokeObjectURL(url)
+}
+
 function KpiCard({ titulo, valor, status, cor }: { titulo: string; valor: string; status: string; cor: string }) {
   return (
     <div className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm flex-1">
@@ -80,7 +110,16 @@ export default function RelatoriosPage() {
           <button onClick={() => router.back()}>
             <ArrowLeft className="w-5 h-5 text-gray-600" />
           </button>
-          <h1 className="text-xl font-bold text-gray-900">Relatórios</h1>
+          <h1 className="text-xl font-bold text-gray-900 flex-1">Relatórios</h1>
+          {animais.length > 0 && (
+            <button
+              onClick={() => exportarCSV(animais)}
+              className="bg-green-800 text-white text-xs font-bold px-3 py-1.5 rounded-xl"
+              title="Exportar dados do rebanho em CSV"
+            >
+              Exportar CSV
+            </button>
+          )}
         </div>
       </div>
 

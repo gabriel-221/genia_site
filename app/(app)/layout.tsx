@@ -4,11 +4,12 @@ import { usePathname } from 'next/navigation'
 import { LayoutDashboard, PawPrint, Dna, Sparkles, BarChart3, Heart } from '@/components/Icons'
 
 const NAV = [
-  { href: '/dashboard',  icon: LayoutDashboard, label: 'Dashboard' },
-  { href: '/animais',    icon: PawPrint,         label: 'Animais'   },
-  { href: '/prenhez',    icon: Heart,            label: 'Prenhez'   },
-  { href: '/match',      icon: Dna,              label: 'Match'     },
-  { href: '/copilot',    icon: Sparkles,         label: 'Copilot'   },
+  { href: '/dashboard',  icon: LayoutDashboard, label: 'Dashboard'  },
+  { href: '/animais',    icon: PawPrint,         label: 'Animais'    },
+  { href: '/prenhez',    icon: Heart,            label: 'Prenhez'    },
+  { href: '/match',      icon: Dna,              label: 'Match'      },
+  { href: '/copilot',    icon: Sparkles,         label: 'Copilot'    },
+  { href: '/relatorios', icon: BarChart3,        label: 'Relatórios' },
 ]
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
@@ -30,7 +31,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 active ? 'text-green-800' : 'text-gray-400'
               }`}>
                 <Icon className={`w-5 h-5 ${active ? 'stroke-[2.5]' : 'stroke-[1.5]'}`} />
-                <span className={`text-[10px] font-medium ${active ? 'text-green-800' : 'text-gray-400'}`}>
+                <span className={`text-[9px] font-medium ${active ? 'text-green-800' : 'text-gray-400'}`}>
                   {label}
                 </span>
                 {active && <div className="w-1 h-1 rounded-full bg-green-800 -mb-1" />}

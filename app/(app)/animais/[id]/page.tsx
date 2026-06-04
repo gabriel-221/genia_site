@@ -154,6 +154,22 @@ export default function AnimalDetalhePage() {
             {animal.nome_mae && <InfoRow label="Mãe" value={`${animal.nome_mae} (${animal.raca_mae})`} />}
           </div>
         )}
+
+        {/* Rastreabilidade */}
+        <div className="bg-green-50 rounded-2xl p-4 border border-green-100">
+          <h2 className="font-bold text-green-900 mb-1 text-sm">Rastreabilidade</h2>
+          <p className="text-xs text-green-700 mb-2">
+            Perfil público gerado automaticamente para rastreabilidade genética e reprodutiva.
+          </p>
+          <a
+            href={`/a/${animal.id}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-block bg-green-800 text-white text-xs font-bold px-4 py-2 rounded-xl"
+          >
+            Ver Perfil Público (NFC/QR) →
+          </a>
+        </div>
       </div>
 
       {/* Delete confirm */}
