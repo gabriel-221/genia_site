@@ -47,14 +47,14 @@ class AiCopilotRepository {
                 put("max_tokens", 1024)
                 put("system", systemPrompt)
                 put("messages", messages)
-            }.toString()
+            }
 
             val request = Request.Builder()
                 .url("https://api.anthropic.com/v1/messages")
-                .addHeader("x-api-key", BuildConfig.CLAUDE_API_KEY.ifEmpty { "placeholder_key" })
+                .addHeader("x-api-key", BuildConfig.CLAUDE_API_KEY)
                 .addHeader("anthropic-version", "2023-06-01")
                 .addHeader("content-type", "application/json")
-                .post(body.toRequestBody("application/json".toMediaType()))
+                .post(body.toString().toRequestBody("application/json".toMediaType()))
                 .build()
 
             val response = client.newCall(request).execute()

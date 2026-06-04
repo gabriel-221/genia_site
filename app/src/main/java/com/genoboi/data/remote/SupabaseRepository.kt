@@ -106,14 +106,11 @@ class SupabaseRepository(private val context: Context) {
     suspend fun listarAnimais(): List<AnimalDto> {
         val produtorId = getProdutorId() ?: return emptyList()
         return try {
-            // Tenta buscar animais por qualquer uma das colunas possíveis de ID
+            // Busca animais vinculados ao produtor logado
             val lista = client.from("genia_animal")
                 .select { 
                     filter { 
-                        or {
-                            eq("produtor_id", produtorId)
-                            eq("produtor_supabase_id", produtorId)
-                        }
+                        eq("produtor_id", produtorId)
                     } 
                 }
                 .decodeList<AnimalDto>()
