@@ -1,54 +1,38 @@
 'use client'
 import { useEffect } from 'react'
-import Script from 'next/script'
 
 export default function VLibras() {
-  // Inicializa o widget após o script carregar
   useEffect(() => {
-    function init() {
-      if (typeof window !== 'undefined' && (window as any).VLibras) {
+    // Cria a estrutura HTML exigida pela documentação VLibras via DOM imperativo.
+    // Não usamos JSX porque React filtra atributos customizados (vw, vw-access-button).
+    // Ref: https://vlibras.gov.br/doc/widget/installation/webpageintegration.html
+    const container = document.createElement('div')
+    container.setAttribute('vw', '')
+    container.className = 'enabled'
+    container.innerHTML = `
+      <div vw-access-button class="active"></div>
+      <div vw-plugin-wrapper>
+        <div class="vw-plugin-top-wrapper"></div>
+      </div>
+    `
+    document.body.appendChild(container)
+
+    // Carrega o script e inicializa o widget após o DOM estar pronto
+    const script = document.createElement('script')
+    script.src = 'https://vlibras.gov.br/app/vlibras-plugin.js'
+    script.async = true
+    script.onload = () => {
+      if ((window as any).VLibras) {
         new (window as any).VLibras.Widget('https://vlibras.gov.br/app')
       }
     }
-    // Tenta imediatamente (se script já carregou) ou aguarda
-    if ((window as any).VLibras) {
-      init()
+    document.body.appendChild(script)
+
+    return () => {
+      if (container.parentNode) document.body.removeChild(container)
+      if (script.parentNode) document.body.removeChild(script)
     }
   }, [])
 
-  return (
-    <>
-      {/*
-        Estrutura exata exigida pela documentação oficial do VLibras:
-        https://vlibras.gov.br/doc/widget/installation/webpageintegration.html
-
-        O atributo "vw" na div externa é obrigatório para o widget funcionar.
-        Usamos dangerouslySetInnerHTML para garantir que os atributos HTML
-        customizados (vw, vw-access-button, vw-plugin-wrapper) sejam
-        renderizados corretamente, sem filtros do React/TypeScript.
-      */}
-      <div
-        dangerouslySetInnerHTML={{
-          __html: `
-            <div vw class="enabled">
-              <div vw-access-button class="active"></div>
-              <div vw-plugin-wrapper>
-                <div class="vw-plugin-top-wrapper"></div>
-              </div>
-            </div>
-          `,
-        }}
-      />
-
-      <Script
-        src="https://vlibras.gov.br/app/vlibras-plugin.js"
-        strategy="afterInteractive"
-        onLoad={() => {
-          if (typeof window !== 'undefined' && (window as any).VLibras) {
-            new (window as any).VLibras.Widget('https://vlibras.gov.br/app')
-          }
-        }}
-      />
-    </>
-  )
+  return null
 }
