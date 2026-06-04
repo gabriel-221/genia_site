@@ -4,7 +4,24 @@ import androidx.room.*
 import com.genoboi.data.local.entity.AnimalEntity
 import com.genoboi.data.local.entity.CicloCioEntity
 import com.genoboi.data.local.entity.EventoReprodutivoEntity
+import com.genoboi.data.local.entity.ProdutorEntity
 import kotlinx.coroutines.flow.Flow
+
+@Dao
+interface ProdutorDao {
+
+    @Query("SELECT * FROM produtores LIMIT 1")
+    suspend fun buscarAtual(): ProdutorEntity?
+
+    @Query("SELECT * FROM produtores WHERE email = :email LIMIT 1")
+    suspend fun buscarPorEmail(email: String): ProdutorEntity?
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun salvar(produtor: ProdutorEntity)
+
+    @Query("DELETE FROM produtores")
+    suspend fun limparTodos()
+}
 
 @Dao
 interface AnimalDao {
@@ -12,11 +29,20 @@ interface AnimalDao {
     @Query("SELECT * FROM animais ORDER BY nome ASC")
     fun observarTodos(): Flow<List<AnimalEntity>>
 
+    @Query("SELECT * FROM animais WHERE produtorSupabaseId = :produtorId ORDER BY nome ASC")
+    fun observarPorProdutor(produtorId: String): Flow<List<AnimalEntity>>
+
+    @Query("SELECT * FROM animais WHERE especie = :especie AND produtorSupabaseId = :produtorId ORDER BY nome ASC")
+    fun observarPorEspecieEProdutor(especie: String, produtorId: String): Flow<List<AnimalEntity>>
+
     @Query("SELECT * FROM animais WHERE especie = :especie ORDER BY nome ASC")
     fun observarPorEspecie(especie: String): Flow<List<AnimalEntity>>
 
     @Query("SELECT * FROM animais WHERE id = :id")
     suspend fun buscarPorId(id: Long): AnimalEntity?
+
+    @Query("SELECT COUNT(*) FROM animais WHERE produtorSupabaseId = :produtorId")
+    suspend fun contarPorProdutor(produtorId: String): Int
 
     @Query("SELECT COUNT(*) FROM animais")
     suspend fun contarTotal(): Int

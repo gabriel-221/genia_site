@@ -20,13 +20,9 @@ object SupabaseConfig {
         }
     }
 
-    // ── Produtor ID ──────────────────────────────────────────────────────────
-    // O app mantém um produtorId local (UUID) para associar os animais ao
-    // registro genia_produtor no Supabase.  É gerado na primeira execução e
-    // gravado em SharedPreferences.
-
-    private const val PREFS    = "genoboi_remote_prefs"
-    private const val KEY_PROD = "produtor_id"
+    private const val PREFS        = "genoboi_remote_prefs"
+    private const val KEY_PROD     = "produtor_id"
+    private const val KEY_LOGADO   = "is_logged_in"
 
     fun getProdutorId(context: Context): String? =
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
@@ -35,4 +31,16 @@ object SupabaseConfig {
     fun saveProdutorId(context: Context, id: String) =
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
             .edit().putString(KEY_PROD, id).apply()
+
+    fun clearProdutorId(context: Context) =
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .edit().remove(KEY_PROD).apply()
+
+    fun isLogado(context: Context): Boolean =
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .getBoolean(KEY_LOGADO, false)
+
+    fun setLogado(context: Context, logado: Boolean) =
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .edit().putBoolean(KEY_LOGADO, logado).apply()
 }

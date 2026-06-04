@@ -90,13 +90,13 @@ data class CadastroState(
     val peso: String          = "",
     val escoreCorporal: String = "3,0",
     val fazenda: String       = "",
-    
+
     // Atributos específicos Fêmea (Matriz)
     val numeroPartos: String = "0",
     val abortos: String = "0",
     val diasDesdeUltimoParto: String = "0",
     val filhosNascidosMatriz: String = "0",
-    
+
     // Atributos específicos Macho (Reprodutor)
     val qualidadeSemenMacho: String = "",
     val filhosNascidosMacho: String = "0",
@@ -107,7 +107,10 @@ data class CadastroState(
     val rfidPai: String       = "",
     val nomeMae: String       = "",
     val racaMae: String       = "",
-    val rfidMae: String       = ""
+    val rfidMae: String       = "",
+
+    // GeneMatch
+    val disponivelMatch: Boolean = true
 )
 
 @Composable
@@ -392,6 +395,34 @@ fun PassoBasico(estado: CadastroState, onChange: (CadastroState) -> Unit) {
             }
         }
 
+        // Toggle GeneMatch
+        HorizontalDivider(color = GenoGray100, modifier = Modifier.padding(vertical = 4.dp))
+        Row(
+            modifier          = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(Modifier.weight(1f)) {
+                Text("Disponível no GeneMatch", fontWeight = FontWeight.Medium, fontSize = 14.sp, color = GenoGray900)
+                Text(
+                    "Outros produtores poderão ver este animal para cruzamento genético",
+                    fontSize = 11.sp,
+                    color    = GenoGray600
+                )
+            }
+            Spacer(Modifier.width(8.dp))
+            Switch(
+                checked         = estado.disponivelMatch,
+                onCheckedChange = { onChange(estado.copy(disponivelMatch = it)) },
+                colors = SwitchDefaults.colors(
+                    checkedThumbColor  = GenoWhite,
+                    checkedTrackColor  = GenoGreen800,
+                    uncheckedThumbColor = GenoGray400,
+                    uncheckedTrackColor = GenoGray200
+                )
+            )
+        }
+        HorizontalDivider(color = GenoGray100, modifier = Modifier.padding(vertical = 4.dp))
+
         // Atributos específicos baseados no sexo (da imagem)
         if (estado.sexo == Sexo.FEMEA) {
             Text("Histórico da Matriz", fontWeight = FontWeight.SemiBold, fontSize = 14.sp, color = GenoGreen800)
@@ -488,6 +519,13 @@ fun PassoRevisao(estado: CadastroState, onEditar: (Int) -> Unit) {
             if (estado.nomePai.isNotEmpty()) RevisaoRow("Pai", "${estado.nomePai} (${estado.racaPai})")
             if (estado.nomeMae.isNotEmpty()) RevisaoRow("Mãe", "${estado.nomeMae} (${estado.racaMae})")
             if (estado.nomePai.isEmpty() && estado.nomeMae.isEmpty()) Text("Não informado", fontSize = 12.sp, color = GenoGray400)
+        }
+
+        RevisaoCard(titulo = "GeneMatch", onEditar = { onEditar(1) }) {
+            RevisaoRow(
+                "Visível para outros produtores",
+                if (estado.disponivelMatch) "Sim" else "Não"
+            )
         }
     }
 }
@@ -612,56 +650,54 @@ fun CadastroState.toAnimal(): Animal {
     } catch (e: Exception) { LocalDate.now() }
 
     return Animal(
-        nome           = nome,
-        especie        = especie,
-        raca           = raca,
-        sexo           = sexo,
-        dataNascimento = nascimento,
-        pesoKg         = peso.replace(",", ".").toFloatOrNull() ?: 0f,
-        escoreCorporal = escoreCorporal.replace(",", ".").toFloatOrNull() ?: 3f,
-        fazenda        = fazenda,
-        nomePai        = nomePai,
-        racaPai        = racaPai,
-        rfidPai        = rfidPai,
-        nomeMae        = nomeMae,
-        racaMae        = racaMae,
-        rfidMae        = rfidMae,
-        
-        // Novos campos
+        nome                 = nome,
+        especie              = especie,
+        raca                 = raca,
+        sexo                 = sexo,
+        dataNascimento       = nascimento,
+        pesoKg               = peso.replace(",", ".").toFloatOrNull() ?: 0f,
+        escoreCorporal       = escoreCorporal.replace(",", ".").toFloatOrNull() ?: 3f,
+        fazenda              = fazenda,
+        nomePai              = nomePai,
+        racaPai              = racaPai,
+        rfidPai              = rfidPai,
+        nomeMae              = nomeMae,
+        racaMae              = racaMae,
+        rfidMae              = rfidMae,
         numeroPartos         = numeroPartos.toIntOrNull() ?: 0,
         abortos              = abortos.toIntOrNull() ?: 0,
         diasDesdeUltimoParto = diasDesdeUltimoParto.toIntOrNull() ?: 0,
         filhosNascidosMatriz = filhosNascidosMatriz.toIntOrNull() ?: 0,
-        qualidadeSemenMacho   = qualidadeSemenMacho.replace(",", ".").toFloatOrNull() ?: 3f,
-        filhosNascidosMacho   = filhosNascidosMacho.toIntOrNull() ?: 0
+        qualidadeSemenMacho  = qualidadeSemenMacho.replace(",", ".").toFloatOrNull() ?: 3f,
+        filhosNascidosMacho  = filhosNascidosMacho.toIntOrNull() ?: 0,
+        disponivelMatch      = disponivelMatch
     )
 }
 
 fun Animal.toState(): CadastroState {
     val dataStr = "${dataNascimento.dayOfMonth.toString().padStart(2,'0')}${dataNascimento.monthValue.toString().padStart(2,'0')}${dataNascimento.year}"
     return CadastroState(
-        nome = nome,
-        especie = especie,
-        raca = raca,
-        sexo = sexo,
-        dataNascimento = dataStr,
-        peso = if (pesoKg > 0) pesoKg.toString() else "",
-        escoreCorporal = escoreCorporal.toString().replace(".", ","),
-        fazenda = fazenda,
-        nomePai = nomePai,
-        racaPai = racaPai,
-        rfidPai = rfidPai,
-        nomeMae = nomeMae,
-        racaMae = racaMae,
-        rfidMae = rfidMae,
-        
-        // Novos campos
-        numeroPartos = numeroPartos.toString(),
-        abortos = abortos.toString(),
+        nome                 = nome,
+        especie              = especie,
+        raca                 = raca,
+        sexo                 = sexo,
+        dataNascimento       = dataStr,
+        peso                 = if (pesoKg > 0) pesoKg.toString() else "",
+        escoreCorporal       = escoreCorporal.toString().replace(".", ","),
+        fazenda              = fazenda,
+        nomePai              = nomePai,
+        racaPai              = racaPai,
+        rfidPai              = rfidPai,
+        nomeMae              = nomeMae,
+        racaMae              = racaMae,
+        rfidMae              = rfidMae,
+        numeroPartos         = numeroPartos.toString(),
+        abortos              = abortos.toString(),
         diasDesdeUltimoParto = diasDesdeUltimoParto.toString(),
         filhosNascidosMatriz = filhosNascidosMatriz.toString(),
-        qualidadeSemenMacho = qualidadeSemenMacho.toString().replace(".", ","),
-        filhosNascidosMacho = filhosNascidosMacho.toString()
+        qualidadeSemenMacho  = qualidadeSemenMacho.toString().replace(".", ","),
+        filhosNascidosMacho  = filhosNascidosMacho.toString(),
+        disponivelMatch      = disponivelMatch
     )
 }
 

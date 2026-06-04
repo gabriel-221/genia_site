@@ -6,28 +6,28 @@ import com.genoboi.data.remote.dto.*
 import com.genoboi.domain.model.Animal
 import com.genoboi.domain.model.EventoReprodutivo
 import io.github.jan.supabase.postgrest.from
-import io.github.jan.supabase.postgrest.query.Columns
-import java.util.UUID
 
 class SupabaseRepository(private val context: Context) {
 
     private val client get() = SupabaseConfig.client
 
+    fun getProdutorId(): String? = SupabaseConfig.getProdutorId(context)
+
     // ── Produtor ──────────────────────────────────────────────────────────────
 
-    // Garante que existe um registro genia_produtor para este dispositivo.
-    // Retorna o produtorId (UUID) a ser usado em todas as operações.
     suspend fun garantirProdutor(): String {
         val cached = SupabaseConfig.getProdutorId(context)
         if (cached != null) return cached
 
-        val novoId = UUID.randomUUID().toString()
+        // Sem produtorId em cache — o AuthRepository deve ter salvo após login.
+        // Isso não deveria ocorrer após autenticação, mas como fallback geramos um ID local.
+        val novoId = java.util.UUID.randomUUID().toString()
         try {
             client.from("genia_produtor").upsert(
                 ProdutorDto(id = novoId, nome = "GENIA App")
             )
             SupabaseConfig.saveProdutorId(context, novoId)
-            Log.d("Supabase", "Produtor criado: $novoId")
+            Log.d("Supabase", "Produtor criado fallback: $novoId")
         } catch (e: Exception) {
             Log.e("Supabase", "Erro ao criar produtor: ${e.message}")
         }
@@ -40,9 +40,7 @@ class SupabaseRepository(private val context: Context) {
         return try {
             val produtorId = garantirProdutor()
             val resultado = client.from("genia_animal")
-                .insert(animal.toDto(produtorId)) {
-                    select()
-                }
+                .insert(animal.toDto(produtorId)) { select() }
                 .decodeSingle<AnimalDto>()
             Log.d("Supabase", "Animal inserido: ${resultado.id}")
             resultado.id
@@ -78,14 +76,11 @@ class SupabaseRepository(private val context: Context) {
         }
     }
 
-    // Carrega todos os animais do produtor do Supabase
     suspend fun listarAnimais(): List<AnimalDto> {
         return try {
             val produtorId = garantirProdutor()
             client.from("genia_animal")
-                .select {
-                    filter { eq("produtor_id", produtorId) }
-                }
+                .select { filter { eq("produtor_id", produtorId) } }
                 .decodeList<AnimalDto>()
         } catch (e: Exception) {
             Log.e("Supabase", "Erro ao listar animais: ${e.message}")
@@ -98,9 +93,7 @@ class SupabaseRepository(private val context: Context) {
     suspend fun inserirEvento(evento: EventoReprodutivo, supabaseAnimalId: String): String? {
         return try {
             val resultado = client.from("genia_evento_reprodutivo")
-                .insert(evento.toDto(supabaseAnimalId)) {
-                    select()
-                }
+                .insert(evento.toDto(supabaseAnimalId)) { select() }
                 .decodeSingle<EventoDto>()
             resultado.id
         } catch (e: Exception) {
@@ -112,9 +105,7 @@ class SupabaseRepository(private val context: Context) {
     suspend fun listarEventos(supabaseAnimalId: String): List<EventoDto> {
         return try {
             client.from("genia_evento_reprodutivo")
-                .select {
-                    filter { eq("animal_id", supabaseAnimalId) }
-                }
+                .select { filter { eq("animal_id", supabaseAnimalId) } }
                 .decodeList<EventoDto>()
         } catch (e: Exception) {
             Log.e("Supabase", "Erro ao listar eventos: ${e.message}")

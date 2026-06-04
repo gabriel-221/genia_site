@@ -26,7 +26,6 @@ import com.genoboi.domain.model.Sexo
 import com.genoboi.ui.components.EspecieChip
 import com.genoboi.ui.theme.*
 import java.time.LocalDate
-import java.time.Period
 
 @Composable
 fun AnimaisScreen(
@@ -286,11 +285,3 @@ fun EmptyAnimaisPlaceholder(onCadastrar: () -> Unit) {
     }
 }
 
-fun idadeAnimal(nascimento: LocalDate): String {
-    val p = Period.between(nascimento, LocalDate.now())
-    return when {
-        p.years > 0  -> "${p.years} ano${if (p.years > 1) "s" else ""}"
-        p.months > 0 -> "${p.months} mes${if (p.months > 1) "es" else ""}"
-        else         -> "${p.days} dias"
-    }
-}

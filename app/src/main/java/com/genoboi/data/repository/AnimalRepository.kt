@@ -24,7 +24,6 @@ class AnimalRepository(
     private val modelHelper: PrenhezModelHelper? = null,
     private val remoteRepo: SupabaseRepository? = null
 ) {
-
     private val ioScope = CoroutineScope(Dispatchers.IO)
 
     // ── ML ────────────────────────────────────────────────────────────────────
@@ -34,8 +33,14 @@ class AnimalRepository(
 
     // ── Leitura ───────────────────────────────────────────────────────────────
 
-    fun observarAnimais(): Flow<List<Animal>> =
-        animalDao.observarTodos().map { list -> list.map { it.toDomain() } }
+    fun observarAnimais(): Flow<List<Animal>> {
+        val produtorId = remoteRepo?.getProdutorId()
+        return if (produtorId != null) {
+            animalDao.observarPorProdutor(produtorId).map { list -> list.map { it.toDomain() } }
+        } else {
+            animalDao.observarTodos().map { list -> list.map { it.toDomain() } }
+        }
+    }
 
     suspend fun buscarAnimalPorId(id: Long): Animal? =
         animalDao.buscarPorId(id)?.toDomain()
@@ -43,8 +48,14 @@ class AnimalRepository(
     suspend fun buscarSupabaseId(id: Long): String? =
         animalDao.buscarPorId(id)?.supabaseId
 
-    suspend fun contarAnimais(): Int =
-        animalDao.contarTotal()
+    suspend fun contarAnimais(): Int {
+        val produtorId = remoteRepo?.getProdutorId()
+        return if (produtorId != null) {
+            animalDao.contarPorProdutor(produtorId)
+        } else {
+            animalDao.contarTotal()
+        }
+    }
 
     fun observarEventos(animalId: Long): Flow<List<EventoReprodutivo>> =
         eventoDao.observarPorAnimal(animalId).map { list -> list.map { it.toDomain() } }
@@ -52,16 +63,16 @@ class AnimalRepository(
     // ── Escrita (local + sync remoto assíncrono) ───────────────────────────────
 
     suspend fun salvarAnimal(animal: Animal): Long {
-        val localId = animalDao.inserir(animal.toEntity())
+        val produtorId = remoteRepo?.getProdutorId()
+        val entity = animal.toEntity(produtorId)
+        val localId = animalDao.inserir(entity)
 
-        // Sincroniza ao Supabase em background; armazena o UUID retornado
         remoteRepo?.let { remote ->
             ioScope.launch {
                 val supabaseId = remote.inserirAnimal(animal.copy(id = localId))
                 if (supabaseId != null) {
-                    val entity = animalDao.buscarPorId(localId)
-                    if (entity != null) {
-                        animalDao.atualizar(entity.copy(supabaseId = supabaseId))
+                    animalDao.buscarPorId(localId)?.let { existing ->
+                        animalDao.atualizar(existing.copy(supabaseId = supabaseId))
                     }
                 }
             }
@@ -70,17 +81,17 @@ class AnimalRepository(
     }
 
     suspend fun atualizarAnimal(animal: Animal) {
-        animalDao.atualizar(animal.toEntity())
+        val produtorId = remoteRepo?.getProdutorId()
+        animalDao.atualizar(animal.toEntity(produtorId).copy(
+            supabaseId = animalDao.buscarPorId(animal.id)?.supabaseId
+        ))
 
         remoteRepo?.let { remote ->
             val supabaseId = animalDao.buscarPorId(animal.id)?.supabaseId
-            if (supabaseId != null) {
-                ioScope.launch {
+            ioScope.launch {
+                if (supabaseId != null) {
                     remote.atualizarAnimal(animal, supabaseId)
-                }
-            } else {
-                // Ainda não tem ID remoto — tenta inserir agora
-                ioScope.launch {
+                } else {
                     val newId = remote.inserirAnimal(animal)
                     if (newId != null) {
                         animalDao.buscarPorId(animal.id)?.let {
@@ -95,7 +106,6 @@ class AnimalRepository(
     suspend fun deletarAnimal(id: Long) {
         val supabaseId = animalDao.buscarPorId(id)?.supabaseId
         animalDao.deletarPorId(id)
-
         if (supabaseId != null) {
             remoteRepo?.let { remote ->
                 ioScope.launch { remote.deletarAnimal(supabaseId) }
@@ -105,7 +115,6 @@ class AnimalRepository(
 
     suspend fun salvarEvento(evento: EventoReprodutivo): Long {
         val localId = eventoDao.inserir(evento.toEntity())
-
         remoteRepo?.let { remote ->
             ioScope.launch {
                 val supabaseAnimalId = animalDao.buscarPorId(evento.animalId)?.supabaseId
@@ -117,24 +126,26 @@ class AnimalRepository(
         return localId
     }
 
-    // ── Sync inicial (chamar no startup quando online) ────────────────────────
+    // ── Sync inicial ──────────────────────────────────────────────────────────
 
-    // Baixa todos os animais do Supabase e atualiza/insere no Room local.
     suspend fun sincronizarDeRemoto() {
         val remote = remoteRepo ?: return
+        val produtorId = remote.getProdutorId() ?: return
         try {
             val remotos = remote.listarAnimais()
             for (dto in remotos) {
                 val supabaseId = dto.id ?: continue
                 val animal = dto.toDomain()
-
-                // Verifica se já existe pelo supabaseId
                 val existente = animalDao.buscarPorSupabaseId(supabaseId)
                 if (existente == null) {
-                    val localId = animalDao.inserir(animal.toEntity().copy(supabaseId = supabaseId))
+                    val localId = animalDao.inserir(
+                        animal.toEntity(produtorId).copy(supabaseId = supabaseId)
+                    )
                     Log.d("Supabase", "Importado do remoto: ${animal.nome} (localId=$localId)")
                 } else {
-                    animalDao.atualizar(animal.toEntity().copy(id = existente.id, supabaseId = supabaseId))
+                    animalDao.atualizar(
+                        animal.toEntity(produtorId).copy(id = existente.id, supabaseId = supabaseId)
+                    )
                 }
             }
         } catch (e: Exception) {

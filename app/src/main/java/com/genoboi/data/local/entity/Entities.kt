@@ -5,6 +5,21 @@ import androidx.room.ForeignKey
 import androidx.room.Index
 import androidx.room.PrimaryKey
 
+@Entity(tableName = "produtores")
+data class ProdutorEntity(
+    @PrimaryKey
+    val supabaseId: String,
+    val userId: String,
+    val email: String,
+    val senhaHash: String,
+    val nome: String,
+    val nomeFazenda: String = "",
+    val municipio: String = "",
+    val estado: String = "CE",
+    val cpf: String = "",
+    val telefone: String = ""
+)
+
 @Entity(tableName = "animais")
 data class AnimalEntity(
     @PrimaryKey(autoGenerate = true)
@@ -18,7 +33,7 @@ data class AnimalEntity(
     val escoreCorporal: Float = 3f,
     val fazenda: String = "",
     val fotoUrl: String? = null,
-    
+
     // Pedigree
     val nomePai: String = "",
     val racaPai: String = "",
@@ -26,24 +41,28 @@ data class AnimalEntity(
     val nomeMae: String = "",
     val racaMae: String = "",
     val rfidMae: String = "",
-    
-    // Atributos específicos Matriz
+
+    // Atributos Matriz
     val numeroPartos: Int = 0,
     val abortos: Int = 0,
     val diasDesdeUltimoParto: Int = 0,
     val filhosNascidosMatriz: Int = 0,
-    
-    // Atributos específicos Macho
+
+    // Atributos Macho
     val qualidadeSemenMacho: Float,
     val filhosNascidosMacho: Int = 0,
-    
-    // Atributos de saída / IA
+
+    // IA / saída
     val parentescoEndogamia: Float = 0f,
     val chancePrenhezGerada: Float = 0f,
     val prenhou: Boolean = false,
 
-    // ID do registro no Supabase (null enquanto não sincronizado)
-    val supabaseId: String? = null
+    // Supabase
+    val supabaseId: String? = null,
+    val produtorSupabaseId: String? = null,
+
+    // GeneMatch
+    val disponivelMatch: Boolean = true
 )
 
 @Entity(

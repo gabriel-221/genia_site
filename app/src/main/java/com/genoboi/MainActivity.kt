@@ -14,8 +14,11 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.genoboi.data.local.AppDatabase
 import com.genoboi.data.ml.PrenhezModelHelper
+import com.genoboi.data.remote.SupabaseConfig
 import com.genoboi.data.remote.SupabaseRepository
 import com.genoboi.data.repository.AnimalRepository
+import com.genoboi.ui.auth.CadastroUsuarioScreen
+import com.genoboi.ui.auth.LoginScreen
 import com.genoboi.ui.components.GenoBottomBar
 import com.genoboi.ui.components.GenoTopBar
 import com.genoboi.ui.navigation.GenoNavGraph
@@ -48,23 +51,52 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun GenoApp(modelHelper: PrenhezModelHelper?) {
-    val context        = LocalContext.current
-    val db             = remember { AppDatabase.getInstance(context) }
-    val remoteRepo     = remember { SupabaseRepository(context) }
-    val repository     = remember {
+    val context = LocalContext.current
+    var isLogado by remember { mutableStateOf(SupabaseConfig.isLogado(context)) }
+
+    if (!isLogado) {
+        // ── Fluxo de autenticação ──────────────────────────────────────────────
+        var showCadastro by remember { mutableStateOf(false) }
+        if (showCadastro) {
+            CadastroUsuarioScreen(
+                onVoltar     = { showCadastro = false },
+                onCadastrado = { isLogado = true }
+            )
+        } else {
+            LoginScreen(
+                onLoginSucesso = { isLogado = true },
+                onCriarConta   = { showCadastro = true }
+            )
+        }
+    } else {
+        // ── App principal ──────────────────────────────────────────────────────
+        AppPrincipal(
+            modelHelper = modelHelper,
+            onLogout    = { isLogado = false }
+        )
+    }
+}
+
+@Composable
+private fun AppPrincipal(
+    modelHelper: PrenhezModelHelper?,
+    onLogout: () -> Unit
+) {
+    val context    = LocalContext.current
+    val db         = remember { AppDatabase.getInstance(context) }
+    val remoteRepo = remember { SupabaseRepository(context) }
+    val repository = remember {
         AnimalRepository(db.animalDao(), db.eventoDao(), db.cicloDao(), modelHelper, remoteRepo)
     }
 
-    // Sincroniza do Supabase na abertura do app (em background, sem bloquear a UI)
-    androidx.compose.runtime.LaunchedEffect(Unit) {
+    LaunchedEffect(Unit) {
         repository.sincronizarDeRemoto()
     }
 
-    val navController = rememberNavController()
+    val navController  = rememberNavController()
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute   = backStackEntry?.destination?.route
 
-    // Telas que exibem a bottom nav
     val showBottomNav = currentRoute in listOf(
         Screen.Dashboard.route,
         Screen.Animais.route,
@@ -73,7 +105,6 @@ fun GenoApp(modelHelper: PrenhezModelHelper?) {
         Screen.AnimalDetalhe.route
     )
 
-    // Telas que exibem a top bar padrão GENIA
     val showTopBar = currentRoute in listOf(
         Screen.Dashboard.route,
         Screen.Animais.route,
@@ -81,23 +112,16 @@ fun GenoApp(modelHelper: PrenhezModelHelper?) {
         Screen.Calendario.route
     )
 
-    val topBarTitulo = when (currentRoute) {
-        Screen.Animais.route    -> ""   // usa logo GENIA
-        Screen.Match.route      -> ""
-        Screen.Calendario.route -> ""
-        else                    -> ""
-    }
-
     Scaffold(
-        modifier   = Modifier.fillMaxSize(),
-        topBar     = {
+        modifier  = Modifier.fillMaxSize(),
+        topBar    = {
             if (showTopBar) {
                 GenoTopBar(
                     badgeCount = if (currentRoute == Screen.Dashboard.route) 5 else 0
                 )
             }
         },
-        bottomBar  = {
+        bottomBar = {
             if (showBottomNav) {
                 GenoBottomBar(
                     currentRoute = currentRoute,

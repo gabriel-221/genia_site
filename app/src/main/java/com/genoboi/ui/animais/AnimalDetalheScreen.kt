@@ -234,6 +234,56 @@ fun AnimalDetalheScreen(
                     }
                 }
 
+                // ── GeneMatch ─────────────────────────────────────────────────
+                Card(
+                    modifier  = Modifier.fillMaxWidth(),
+                    shape     = RoundedCornerShape(12.dp),
+                    colors    = CardDefaults.cardColors(containerColor = GenoWhite),
+                    elevation = CardDefaults.cardElevation(1.dp)
+                ) {
+                    Row(
+                        modifier          = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            Icons.Default.Favorite,
+                            contentDescription = null,
+                            tint     = if (currentAnimal.disponivelMatch) GenoGreen800 else GenoGray400,
+                            modifier = Modifier.size(22.dp)
+                        )
+                        Spacer(Modifier.width(12.dp))
+                        Column(Modifier.weight(1f)) {
+                            Text("GeneMatch", fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
+                            Text(
+                                if (currentAnimal.disponivelMatch)
+                                    "Visível para outros produtores"
+                                else
+                                    "Oculto para outros produtores",
+                                fontSize = 12.sp,
+                                color    = GenoGray600
+                            )
+                        }
+                        Switch(
+                            checked         = currentAnimal.disponivelMatch,
+                            onCheckedChange = { novoValor ->
+                                scope.launch {
+                                    val atualizado = currentAnimal.copy(disponivelMatch = novoValor)
+                                    repository.atualizarAnimal(atualizado)
+                                    animal = atualizado
+                                }
+                            },
+                            colors = SwitchDefaults.colors(
+                                checkedThumbColor   = GenoWhite,
+                                checkedTrackColor   = GenoGreen800,
+                                uncheckedThumbColor = GenoGray400,
+                                uncheckedTrackColor = GenoGray200
+                            )
+                        )
+                    }
+                }
+
                 // ── Botão NFC ─────────────────────────────────────────────────
                 Button(
                     onClick = {

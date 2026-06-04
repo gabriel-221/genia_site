@@ -31,6 +31,16 @@ enum class NivelRisco(val label: String) {
 
 // ─── Modelos de domínio ───────────────────────────────────────────────────────
 
+data class Produtor(
+    val supabaseId: String,
+    val userId: String,
+    val email: String,
+    val nome: String,
+    val nomeFazenda: String = "",
+    val municipio: String = "",
+    val estado: String = "CE"
+)
+
 data class Animal(
     val id: Long = 0,
     val nome: String,
@@ -39,10 +49,10 @@ data class Animal(
     val sexo: Sexo,
     val dataNascimento: LocalDate,
     val pesoKg: Float = 0f,
-    val escoreCorporal: Float = 3f, // ecc_matriz
+    val escoreCorporal: Float = 3f,
     val fazenda: String = "",
     val fotoUrl: String? = null,
-    
+
     // Pedigree
     val nomePai: String = "",
     val racaPai: String = "",
@@ -50,21 +60,24 @@ data class Animal(
     val nomeMae: String = "",
     val racaMae: String = "",
     val rfidMae: String = "",
-    
-    // Atributos específicos Matriz (Fêmea)
+
+    // Atributos Matriz (Fêmea)
     val numeroPartos: Int = 0,
     val abortos: Int = 0,
     val diasDesdeUltimoParto: Int = 0,
     val filhosNascidosMatriz: Int = 0,
-    
-    // Atributos específicos Reprodutor (Macho)
+
+    // Atributos Reprodutor (Macho)
     val qualidadeSemenMacho: Float,
     val filhosNascidosMacho: Int = 0,
-    
-    // Atributos de saída / IA (Escondidos do cadastro)
+
+    // IA / saída
     val parentescoEndogamia: Float = 0f,
     val chancePrenhezGerada: Float = 0f,
-    val prenhou: Boolean = false
+    val prenhou: Boolean = false,
+
+    // GeneMatch
+    val disponivelMatch: Boolean = true
 )
 
 data class GeneMatchResult(
