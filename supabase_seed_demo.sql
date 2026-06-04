@@ -6,6 +6,26 @@
 --  Senhas configuradas no Supabase Auth: Teste@123 (para todos)
 -- =============================================================================
 
+-- Garante que colunas adicionadas pelo app existem (idempotente)
+ALTER TABLE public.genia_animal
+  ADD COLUMN IF NOT EXISTS disponivel_match       boolean  NOT NULL DEFAULT true,
+  ADD COLUMN IF NOT EXISTS producao_leite_diaria  numeric  NOT NULL DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS fazenda                text     NOT NULL DEFAULT '',
+  ADD COLUMN IF NOT EXISTS nome_pai               text     NOT NULL DEFAULT '',
+  ADD COLUMN IF NOT EXISTS raca_pai               text     NOT NULL DEFAULT '',
+  ADD COLUMN IF NOT EXISTS rfid_pai               text     NOT NULL DEFAULT '',
+  ADD COLUMN IF NOT EXISTS nome_mae               text     NOT NULL DEFAULT '',
+  ADD COLUMN IF NOT EXISTS raca_mae               text     NOT NULL DEFAULT '',
+  ADD COLUMN IF NOT EXISTS rfid_mae               text     NOT NULL DEFAULT '',
+  ADD COLUMN IF NOT EXISTS numero_partos          integer  NOT NULL DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS abortos                integer  NOT NULL DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS dias_ultimo_parto      integer  NOT NULL DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS filhos_matriz          integer  NOT NULL DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS qualidade_semen        numeric  NOT NULL DEFAULT 3.0,
+  ADD COLUMN IF NOT EXISTS filhos_macho           integer  NOT NULL DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS chance_prenhez         numeric,
+  ADD COLUMN IF NOT EXISTS prenhou                boolean  NOT NULL DEFAULT false;
+
 -- Desabilita RLS temporariamente para o seed funcionar sem sessão ativa
 ALTER TABLE public.genia_produtor           DISABLE ROW LEVEL SECURITY;
 ALTER TABLE public.genia_animal             DISABLE ROW LEVEL SECURITY;
