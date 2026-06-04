@@ -18,3 +18,45 @@ body {
 .pt-safe {
   padding-top: max(env(safe-area-inset-top), 12px);
 }
+
+/* ── VLibras ─────────────────────────────────────────────────────────────── */
+/* Garante que o widget fique acima do BottomNav e seja visível em mobile */
+[vw-access-button] {
+  z-index: 9998 !important;
+}
+
+[vw-plugin-wrapper] {
+  z-index: 9997 !important;
+}
+
+/* ── Acessibilidade — foco visível (WCAG 2.1 SC 2.4.7) ────────────────── */
+:focus-visible {
+  outline: 3px solid #1F5C36;
+  outline-offset: 3px;
+  border-radius: 6px;
+}
+
+/* ── Skip link ────────────────────────────────────────────────────────── */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+.sr-only.focus\:not-sr-only:focus,
+.focus\:not-sr-only:focus {
+  position: fixed;
+  width: auto;
+  height: auto;
+  padding: 0.5rem 1rem;
+  margin: 0;
+  overflow: visible;
+  clip: auto;
+  white-space: normal;
+}

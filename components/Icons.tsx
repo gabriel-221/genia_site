@@ -1,14 +1,27 @@
 // Ícones inline — sem dependência externa
+// aria-hidden="true" em todos os SVGs (decorativos); rótulo no elemento pai
 import React from 'react'
 
-type IconProps = { className?: string; size?: number }
+type IconProps = { className?: string; size?: number; 'aria-label'?: string }
 
-function Icon({ d, className = 'w-5 h-5', viewBox = '0 0 24 24' }: { d: string | string[]; className?: string; viewBox?: string }) {
+function Icon({ d, className = 'w-5 h-5', viewBox = '0 0 24 24', label }: {
+  d: string | string[]; className?: string; viewBox?: string; label?: string
+}) {
   const paths = Array.isArray(d) ? d : [d]
   return (
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox={viewBox} fill="none"
-      stroke="currentColor" strokeWidth={1.75} strokeLinecap="round" strokeLinejoin="round"
-      className={className}>
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox={viewBox}
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.75}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden={label ? undefined : 'true'}
+      aria-label={label}
+      role={label ? 'img' : undefined}
+    >
       {paths.map((p, i) => <path key={i} d={p} />)}
     </svg>
   )

@@ -27,7 +27,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           {NAV.map(({ href, icon: Icon, label }) => {
             const active = path.startsWith(href)
             return (
-              <Link key={href} href={href} className={`flex-1 flex flex-col items-center py-2 gap-0.5 transition-colors ${
+              <Link key={href} href={href} aria-label={label} aria-current={active ? "page" : undefined} className={`flex-1 flex flex-col items-center py-2 gap-0.5 transition-colors ${
                 active ? 'text-green-800' : 'text-gray-400'
               }`}>
                 <Icon className={`w-5 h-5 ${active ? 'stroke-[2.5]' : 'stroke-[1.5]'}`} />
