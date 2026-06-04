@@ -212,6 +212,45 @@ fun AnimalDetalheScreen(
                         InfoItem("Dias pós-parto", currentAnimal.diasDesdeUltimoParto.toString())
                         InfoItem("Filhos nascidos", currentAnimal.filhosNascidosMatriz.toString())
                     }
+                    
+                    // ── Status de Gestação (Somente Fêmeas) ──────────────────
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = CardDefaults.cardColors(containerColor = if (currentAnimal.prenhou) GenoRed50 else GenoWhite),
+                        elevation = CardDefaults.cardElevation(1.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth().padding(16.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                if (currentAnimal.prenhou) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                                contentDescription = null,
+                                tint = if (currentAnimal.prenhou) GenoRed else GenoGray400
+                            )
+                            Spacer(Modifier.width(12.dp))
+                            Column(Modifier.weight(1f)) {
+                                Text("Status: ${if (currentAnimal.prenhou) "Prenha" else "Vazia"}", 
+                                    fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                                Text("Marcar se o animal está em gestação", fontSize = 12.sp, color = GenoGray600)
+                            }
+                            Switch(
+                                checked = currentAnimal.prenhou,
+                                onCheckedChange = { novoValor ->
+                                    scope.launch {
+                                        val atualizado = currentAnimal.copy(prenhou = novoValor)
+                                        repository.atualizarAnimal(atualizado)
+                                        animal = atualizado
+                                    }
+                                },
+                                colors = SwitchDefaults.colors(
+                                    checkedThumbColor = GenoWhite,
+                                    checkedTrackColor = GenoRed
+                                )
+                            )
+                        }
+                    }
                 } else {
                     InfoSection(titulo = "Histórico do Reprodutor") {
                         InfoItem("Qualidade Seminal", currentAnimal.qualidadeSemenMacho.toString())

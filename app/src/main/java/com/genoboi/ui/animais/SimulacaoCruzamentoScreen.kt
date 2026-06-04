@@ -115,8 +115,14 @@ fun ResultadoSimulacaoScreen(
             macho = mac
             
             if (mat != null && mac != null) {
-                resultado = repository.simularPrenhez(mat, mac)
-                if (resultado == null) erroMsg = "Falha na leitura do modelo."
+                val res = repository.simularPrenhez(mat, mac)
+                resultado = res
+                if (res != null) {
+                    // Salva o resultado da simulação no perfil da fêmea para o relatório
+                    repository.atualizarAnimal(mat.copy(chancePrenhezGerada = res.probabilidade))
+                } else {
+                    erroMsg = "Falha na leitura do modelo."
+                }
             } else {
                 erroMsg = "Animal não encontrado."
             }
