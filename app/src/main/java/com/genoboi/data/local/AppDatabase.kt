@@ -72,6 +72,9 @@ abstract class AppDatabase : RoomDatabase() {
                     "genoboi.db"
                 )
                     .addMigrations(MIGRATION_4_5, MIGRATION_5_6)
+                    // Cobre versões anteriores à 4 (ex: device com v3 instalada):
+                    // apaga o banco local e recria — dados voltam pelo sync Supabase.
+                    .fallbackToDestructiveMigration()
                     .build()
                     .also { INSTANCE = it }
             }

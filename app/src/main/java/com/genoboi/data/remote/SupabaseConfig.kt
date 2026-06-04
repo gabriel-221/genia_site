@@ -21,6 +21,7 @@ object SupabaseConfig {
     private const val PREFS      = "genoboi_remote_prefs"
     private const val KEY_PROD   = "produtor_id"
     private const val KEY_LOGADO = "is_logged_in"
+    private const val KEY_EMAIL  = "user_email"
 
     fun getProdutorId(context: Context): String? =
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
@@ -41,4 +42,16 @@ object SupabaseConfig {
     fun setLogado(context: Context, logado: Boolean) =
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
             .edit().putBoolean(KEY_LOGADO, logado).apply()
+
+    fun getEmail(context: Context): String? =
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .getString(KEY_EMAIL, null)
+
+    fun saveEmail(context: Context, email: String) =
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .edit().putString(KEY_EMAIL, email).apply()
+
+    fun clearEmail(context: Context) =
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .edit().remove(KEY_EMAIL).apply()
 }

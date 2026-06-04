@@ -9,3 +9,9 @@ SUPABASE_ANON_KEY=sua_anon_key_aqui
 
 # Claude (Anthropic) — obtenha em: https://console.anthropic.com
 CLAUDE_API_KEY=sk-ant-api03-...
+
+# Signing (release) — gere com: keytool -genkey -v -keystore app/genia.keystore -alias genia -keyalg RSA -keysize 2048 -validity 10000
+KEYSTORE_PATH=app/genia.keystore
+KEYSTORE_PASSWORD=sua_senha_aqui
+KEY_ALIAS=genia
+KEY_PASSWORD=sua_senha_aqui

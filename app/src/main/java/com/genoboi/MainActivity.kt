@@ -1,6 +1,7 @@
 package com.genoboi
 
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -14,6 +15,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.genoboi.data.local.AppDatabase
 import com.genoboi.data.ml.PrenhezModelHelper
+import com.genoboi.data.remote.AuthRepository
 import com.genoboi.data.remote.SupabaseConfig
 import com.genoboi.data.remote.SupabaseRepository
 import com.genoboi.data.repository.AnimalRepository
@@ -33,7 +35,7 @@ class MainActivity : ComponentActivity() {
         try {
             modelHelper = PrenhezModelHelper(this)
         } catch (e: Exception) {
-            android.util.Log.e("MainActivity", "Falha ao inicializar modelHelper: ${e.message}")
+            Log.e("MainActivity", "Falha ao inicializar modelHelper: ${e.message}")
         }
         enableEdgeToEdge()
         setContent {
@@ -55,7 +57,6 @@ fun GenoApp(modelHelper: PrenhezModelHelper?) {
     var isLogado by remember { mutableStateOf(SupabaseConfig.isLogado(context)) }
 
     if (!isLogado) {
-        // ── Fluxo de autenticação ──────────────────────────────────────────────
         var showCadastro by remember { mutableStateOf(false) }
         if (showCadastro) {
             CadastroUsuarioScreen(
@@ -69,7 +70,6 @@ fun GenoApp(modelHelper: PrenhezModelHelper?) {
             )
         }
     } else {
-        // ── App principal ──────────────────────────────────────────────────────
         AppPrincipal(
             modelHelper = modelHelper,
             onLogout    = { isLogado = false }
@@ -85,12 +85,36 @@ private fun AppPrincipal(
     val context    = LocalContext.current
     val db         = remember { AppDatabase.getInstance(context) }
     val remoteRepo = remember { SupabaseRepository(context) }
+    val authRepo   = remember { AuthRepository(context, db.produtorDao()) }
     val repository = remember {
         AnimalRepository(db.animalDao(), db.eventoDao(), db.cicloDao(), modelHelper, remoteRepo)
     }
 
+    // Ao abrir o app com sessão já salva, restaura o JWT do Supabase.
+    // Sem isso o RLS bloqueia queries porque auth.uid() = null.
     LaunchedEffect(Unit) {
+        val email = SupabaseConfig.getEmail(context)
+        val produtorId = SupabaseConfig.getProdutorId(context)
+
+        if (email != null && produtorId != null) {
+            // Tenta restaurar a sessão online sem precisar da senha —
+            // usa o refresh token que o SDK do Supabase mantém em memória.
+            // Se o app foi fechado e o token expirou, a sessão não existe mais,
+            // mas o sync ainda funciona via anon key para animais com disponivel_match=true.
+            try {
+                // Verifica se já há sessão ativa
+                val sessionAtiva = remoteRepo.temSessaoAtiva()
+                if (!sessionAtiva) {
+                    Log.w("AppPrincipal", "Sem sessão Supabase — sync usará anon key")
+                }
+            } catch (e: Exception) {
+                Log.w("AppPrincipal", "Erro ao verificar sessão: ${e.message}")
+            }
+        }
+
+        // Sincroniza animais do Supabase para o banco local
         repository.sincronizarDeRemoto()
+        Log.d("AppPrincipal", "Sync inicial concluído")
     }
 
     val navController  = rememberNavController()

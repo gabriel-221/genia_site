@@ -5,6 +5,7 @@ import android.util.Log
 import com.genoboi.data.remote.dto.*
 import com.genoboi.domain.model.Animal
 import com.genoboi.domain.model.EventoReprodutivo
+import io.github.jan.supabase.gotrue.auth
 import io.github.jan.supabase.postgrest.from
 
 class SupabaseRepository(private val context: Context) {
@@ -13,14 +14,20 @@ class SupabaseRepository(private val context: Context) {
 
     fun getProdutorId(): String? = SupabaseConfig.getProdutorId(context)
 
+    fun temSessaoAtiva(): Boolean {
+        return try {
+            client.auth.currentSessionOrNull() != null
+        } catch (e: Exception) {
+            false
+        }
+    }
+
     // ── Produtor ──────────────────────────────────────────────────────────────
 
     suspend fun garantirProdutor(): String {
         val cached = SupabaseConfig.getProdutorId(context)
         if (cached != null) return cached
 
-        // Sem produtorId em cache — o AuthRepository deve ter salvo após login.
-        // Isso não deveria ocorrer após autenticação, mas como fallback geramos um ID local.
         val novoId = java.util.UUID.randomUUID().toString()
         try {
             client.from("genia_produtor").upsert(
@@ -29,7 +36,7 @@ class SupabaseRepository(private val context: Context) {
             SupabaseConfig.saveProdutorId(context, novoId)
             Log.d("Supabase", "Produtor criado fallback: $novoId")
         } catch (e: Exception) {
-            Log.e("Supabase", "Erro ao criar produtor: ${e.message}")
+            Log.e("Supabase", "Erro ao criar produtor fallback: ${e.message}")
         }
         return novoId
     }
@@ -76,12 +83,18 @@ class SupabaseRepository(private val context: Context) {
         }
     }
 
+    // Lista os animais do produtor logado.
+    // Com RLS ativo: retorna os do produtor + animais com disponivel_match=true de outros.
+    // Com RLS desativado (hackathon): retorna pelo filtro de produtor_id.
     suspend fun listarAnimais(): List<AnimalDto> {
+        val produtorId = getProdutorId() ?: return emptyList()
         return try {
-            val produtorId = garantirProdutor()
-            client.from("genia_animal")
+            // Tenta buscar por produtor_id (funciona com ou sem RLS)
+            val lista = client.from("genia_animal")
                 .select { filter { eq("produtor_id", produtorId) } }
                 .decodeList<AnimalDto>()
+            Log.d("Supabase", "listarAnimais: ${lista.size} animais para produtorId=$produtorId")
+            lista
         } catch (e: Exception) {
             Log.e("Supabase", "Erro ao listar animais: ${e.message}")
             emptyList()

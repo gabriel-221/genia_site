@@ -44,8 +44,10 @@ class AuthRepository(
             ?: return Result.failure(Exception("Autenticação falhou. Tente novamente."))
 
         val produtorDto = buscarOuCriarProdutor(user.id, email)
+            ?: return Result.failure(Exception("Erro ao buscar dados do produtor. Tente novamente."))
+
         val entity = ProdutorEntity(
-            supabaseId  = produtorDto.id ?: UUID.randomUUID().toString(),
+            supabaseId  = produtorDto.id ?: return Result.failure(Exception("ID do produtor inválido.")),
             userId      = user.id,
             email       = email,
             senhaHash   = hashSenha(senha),
@@ -58,8 +60,9 @@ class AuthRepository(
         )
         produtorDao.salvar(entity)
         SupabaseConfig.saveProdutorId(context, entity.supabaseId)
+        SupabaseConfig.saveEmail(context, email)
         SupabaseConfig.setLogado(context, true)
-        Log.d("Auth", "Login online OK: ${entity.email}")
+        Log.d("Auth", "Login online OK: ${entity.email} — produtorId=${entity.supabaseId}")
         return Result.success(entity)
     }
 
@@ -70,11 +73,27 @@ class AuthRepository(
             )
         return if (entity.senhaHash == hashSenha(senha)) {
             SupabaseConfig.saveProdutorId(context, entity.supabaseId)
+            SupabaseConfig.saveEmail(context, email)
             SupabaseConfig.setLogado(context, true)
             Log.d("Auth", "Login offline OK: ${entity.email}")
             Result.success(entity)
         } else {
             Result.failure(Exception("Senha incorreta."))
+        }
+    }
+
+    // Reconecta a sessão do Supabase ao reiniciar o app.
+    // Sem isso, o client está sem JWT e o RLS bloqueia as queries.
+    suspend fun restaurarSessao(email: String, senha: String): Boolean {
+        return try {
+            client.auth.signInWith(Email) {
+                this.email = email
+                this.password = senha
+            }
+            client.auth.currentUserOrNull() != null
+        } catch (e: Exception) {
+            Log.w("Auth", "Não foi possível restaurar sessão online: ${e.message}")
+            false
         }
     }
 
@@ -91,25 +110,39 @@ class AuthRepository(
                 this.email = email
                 this.password = senha
             }
-            // Aguarda sessão após sign-up (auto-confirm deve estar habilitado no Supabase)
             val user = client.auth.currentUserOrNull()
                 ?: return Result.failure(
                     Exception("Conta criada! Verifique seu e-mail para ativar o acesso.")
                 )
 
-            val novoId = UUID.randomUUID().toString()
-            val produtorDto = ProdutorDto(
-                id          = novoId,
-                userId      = user.id,
-                nome        = nome,
-                municipio   = municipio,
-                estado      = estado,
-                nomeFazenda = nomeFazenda
-            )
-            client.from("genia_produtor").insert(produtorDto)
+            // Verifica se já existe produtor para este user_id antes de criar
+            val existente = try {
+                client.from("genia_produtor")
+                    .select { filter { eq("user_id", user.id) } }
+                    .decodeList<ProdutorDto>()
+                    .firstOrNull()
+            } catch (_: Exception) { null }
+
+            val produtorId: String
+            if (existente != null && existente.id != null) {
+                produtorId = existente.id
+                Log.d("Auth", "Produtor já existe: $produtorId")
+            } else {
+                produtorId = UUID.randomUUID().toString()
+                val produtorDto = ProdutorDto(
+                    id          = produtorId,
+                    userId      = user.id,
+                    nome        = nome,
+                    municipio   = municipio,
+                    estado      = estado,
+                    nomeFazenda = nomeFazenda
+                )
+                client.from("genia_produtor").upsert(produtorDto)
+                Log.d("Auth", "Produtor criado: $produtorId")
+            }
 
             val entity = ProdutorEntity(
-                supabaseId  = novoId,
+                supabaseId  = produtorId,
                 userId      = user.id,
                 email       = email,
                 senhaHash   = hashSenha(senha),
@@ -119,9 +152,10 @@ class AuthRepository(
                 estado      = estado
             )
             produtorDao.salvar(entity)
-            SupabaseConfig.saveProdutorId(context, novoId)
+            SupabaseConfig.saveProdutorId(context, produtorId)
+            SupabaseConfig.saveEmail(context, email)
             SupabaseConfig.setLogado(context, true)
-            Log.d("Auth", "Cadastro OK: $email")
+            Log.d("Auth", "Cadastro OK: $email — produtorId=$produtorId")
             Result.success(entity)
         } catch (e: Exception) {
             Log.e("Auth", "Erro no cadastro: ${e.message}")
@@ -131,48 +165,41 @@ class AuthRepository(
 
     suspend fun logout() {
         try { client.auth.signOut() } catch (_: Exception) {}
-        // Mantém ProdutorEntity para permitir login offline futuro
         SupabaseConfig.setLogado(context, false)
         SupabaseConfig.clearProdutorId(context)
+        SupabaseConfig.clearEmail(context)
         Log.d("Auth", "Logout realizado")
     }
 
     fun isLogado(): Boolean = SupabaseConfig.isLogado(context)
-
     fun getProdutorId(): String? = SupabaseConfig.getProdutorId(context)
+    fun getSavedEmail(): String? = SupabaseConfig.getEmail(context)
 
-    // ── Privados ──────────────────────────────────────────────────────────────
-
-    private suspend fun buscarOuCriarProdutor(userId: String, email: String): ProdutorDto {
+    // Retorna null em vez de UUID aleatório — força o caller a tratar o erro
+    private suspend fun buscarOuCriarProdutor(userId: String, email: String): ProdutorDto? {
         return try {
             val lista = client.from("genia_produtor")
                 .select { filter { eq("user_id", userId) } }
                 .decodeList<ProdutorDto>()
-            lista.firstOrNull() ?: criarProdutorRemoto(userId, email)
-        } catch (e: Exception) {
-            Log.e("Auth", "Erro ao buscar produtor remoto: ${e.message}")
-            // Retorna um DTO mínimo para não bloquear o login
-            ProdutorDto(
-                id        = UUID.randomUUID().toString(),
-                userId    = userId,
-                nome      = email.substringBefore("@"),
-                municipio = "",
-                estado    = "CE"
-            )
-        }
-    }
 
-    private suspend fun criarProdutorRemoto(userId: String, email: String): ProdutorDto {
-        val novoId = UUID.randomUUID().toString()
-        val dto = ProdutorDto(
-            id        = novoId,
-            userId    = userId,
-            nome      = email.substringBefore("@"),
-            municipio = "",
-            estado    = "CE"
-        )
-        client.from("genia_produtor").upsert(dto)
-        return dto
+            lista.firstOrNull() ?: run {
+                val novoId = UUID.randomUUID().toString()
+                val dto = ProdutorDto(
+                    id        = novoId,
+                    userId    = userId,
+                    nome      = email.substringBefore("@"),
+                    municipio = "",
+                    estado    = "CE"
+                )
+                client.from("genia_produtor").upsert(dto)
+                Log.d("Auth", "Produtor criado automaticamente: $novoId para userId=$userId")
+                dto
+            }
+        } catch (e: Exception) {
+            Log.e("Auth", "Erro ao buscar/criar produtor: ${e.message}")
+            // Retorna null — NÃO cria UUID aleatório que quebraria o sync
+            null
+        }
     }
 
     private fun isErroDeRede(e: Exception): Boolean =
