@@ -101,67 +101,66 @@ fun RelatoriosScreen(
                         )
                     }
                 }
-                return@Column
-            }
+            } else {
+                // KPIs principais
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    KpiCard(
+                        titulo = "Taxa de Prenhez",
+                        valor  = if (femeas == 0) "—" else "${taxaPrenhez.toInt()}%",
+                        status = when {
+                            femeas == 0        -> "Sem fêmeas"
+                            taxaPrenhez >= 70  -> "Excelente"
+                            taxaPrenhez >= 50  -> "Bom"
+                            else               -> "Melhorar"
+                        },
+                        cor    = if (taxaPrenhez >= 70) GenoGreen800 else if (taxaPrenhez >= 50) GenoAmber else GenoRed,
+                        modifier = Modifier.weight(1f)
+                    )
+                    KpiCard(
+                        titulo = "Total de Animais",
+                        valor  = "$total",
+                        status = "$femeas fêmeas · $machos machos",
+                        cor    = GenoBlue,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
 
-            // KPIs principais
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                KpiCard(
-                    titulo = "Taxa de Prenhez",
-                    valor  = if (femeas == 0) "—" else "${taxaPrenhez.toInt()}%",
-                    status = when {
-                        femeas == 0        -> "Sem fêmeas"
-                        taxaPrenhez >= 70  -> "Excelente"
-                        taxaPrenhez >= 50  -> "Bom"
-                        else               -> "Melhorar"
-                    },
-                    cor    = if (taxaPrenhez >= 70) GenoGreen800 else if (taxaPrenhez >= 50) GenoAmber else GenoRed,
-                    modifier = Modifier.weight(1f)
-                )
-                KpiCard(
-                    titulo = "Total de Animais",
-                    valor  = "$total",
-                    status = "$femeas fêmeas · $machos machos",
-                    cor    = GenoBlue,
-                    modifier = Modifier.weight(1f)
-                )
-            }
+                // Reprodução
+                ReportSection(titulo = "Reprodução") {
+                    MetricRow("Animais totais",    "$total",  Icons.Default.Pets)
+                    MetricRow("Fêmeas",            "$femeas", null)
+                    MetricRow("Em gestação",        "$prenhas", Icons.Default.Favorite)
+                    MetricRow("Média de partos",   String.format(Locale.getDefault(), "%.1f", mediaPartos), Icons.AutoMirrored.Filled.ShowChart)
+                    MetricRow("Média ECC (fêmeas)", String.format(Locale.getDefault(), "%.1f", mediaECC), null)
+                }
 
-            // Reprodução
-            ReportSection(titulo = "Reprodução") {
-                MetricRow("Animais totais",    "$total",  Icons.Default.Pets)
-                MetricRow("Fêmeas",            "$femeas", null)
-                MetricRow("Em gestação",        "$prenhas", Icons.Default.Favorite)
-                MetricRow("Média de partos",   String.format(Locale.getDefault(), "%.1f", mediaPartos), Icons.AutoMirrored.Filled.ShowChart)
-                MetricRow("Média ECC (fêmeas)", String.format(Locale.getDefault(), "%.1f", mediaECC), null)
-            }
+                // Genética
+                ReportSection(titulo = "Genética") {
+                    MetricRow("Peso médio", "${mediaPeso.toInt()} kg", Icons.AutoMirrored.Filled.TrendingUp)
+                    if (machos > 0)
+                        MetricRow("Qld. seminal média", String.format(Locale.getDefault(), "%.1f / 5", mediaQldSemen), Icons.Default.Science)
+                    if (mediaLeite > 0)
+                        MetricRow("Produção leite média", String.format(Locale.getDefault(), "%.1f L/dia", mediaLeite), Icons.Default.WaterDrop)
+                    val disponivelMatch = animais.count { it.disponivelMatch }
+                    MetricRow("Disponíveis no GeneMatch", "$disponivelMatch", Icons.Default.Favorite)
+                }
 
-            // Genética
-            ReportSection(titulo = "Genética") {
-                MetricRow("Peso médio", "${mediaPeso.toInt()} kg", Icons.AutoMirrored.Filled.TrendingUp)
-                if (machos > 0)
-                    MetricRow("Qld. seminal média", String.format(Locale.getDefault(), "%.1f / 5", mediaQldSemen), Icons.Default.Science)
-                if (mediaLeite > 0)
-                    MetricRow("Produção leite média", String.format(Locale.getDefault(), "%.1f L/dia", mediaLeite), Icons.Default.WaterDrop)
-                val disponivelMatch = animais.count { it.disponivelMatch }
-                MetricRow("Disponíveis no GeneMatch", "$disponivelMatch", Icons.Default.Favorite)
-            }
-
-            // Dica dinâmica
-            Card(
-                colors = CardDefaults.cardColors(containerColor = GenoGreen50),
-                shape  = RoundedCornerShape(12.dp)
-            ) {
-                Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Text("💡", fontSize = 24.sp)
-                    Spacer(Modifier.width(12.dp))
-                    val dica = when {
-                        femeas == 0   -> "Cadastre fêmeas para obter análises de prenhez e recomendações de cruzamento."
-                        taxaPrenhez < 50 -> "Taxa de prenhez abaixo de 50%. Use o GeneMatch para selecionar melhores reprodutores."
-                        taxaPrenhez < 70 -> "Taxa de prenhez pode melhorar. Verifique o escore corporal das fêmeas e o intervalo entre partos."
-                        else             -> "Rebanho com bom desempenho reprodutivo! Use o Copilot para recomendações genéticas avançadas."
+                // Dica dinâmica
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = GenoGreen50),
+                    shape  = RoundedCornerShape(12.dp)
+                ) {
+                    Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Text("💡", fontSize = 24.sp)
+                        Spacer(Modifier.width(12.dp))
+                        val dica = when {
+                            femeas == 0   -> "Cadastre fêmeas para obter análises de prenhez e recomendações de cruzamento."
+                            taxaPrenhez < 50 -> "Taxa de prenhez abaixo de 50%. Use o GeneMatch para selecionar melhores reprodutores."
+                            taxaPrenhez < 70 -> "Taxa de prenhez pode melhorar. Verifique o escore corporal das fêmeas e o intervalo entre partos."
+                            else             -> "Rebanho com bom desempenho reprodutivo! Use o Copilot para recomendações genéticas avançadas."
+                        }
+                        Text(dica, fontSize = 13.sp, color = GenoGreen900, fontWeight = FontWeight.Medium)
                     }
-                    Text(dica, fontSize = 13.sp, color = GenoGreen900, fontWeight = FontWeight.Medium)
                 }
             }
 
