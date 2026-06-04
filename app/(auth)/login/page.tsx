@@ -25,8 +25,8 @@ export default function LoginPage() {
         'Erro ao entrar. Tente novamente.'
       )
     } else {
-      router.push('/dashboard')
-      router.refresh()
+      // Força navegação completa para garantir que o estado de auth seja lido
+      window.location.href = '/dashboard'
     }
   }
 
