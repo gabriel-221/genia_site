@@ -43,18 +43,23 @@ class AuthRepository(
         val user = client.auth.currentUserOrNull()
             ?: return Result.failure(Exception("Autenticação falhou. Tente novamente."))
 
-        // Gera um ID consistente baseado no UID do Supabase Auth.
-        // Isso garante que o produtor_id seja o mesmo em qualquer dispositivo/instalação.
-        val consistenteId = java.util.UUID.nameUUIDFromBytes(user.id.toByteArray()).toString()
-
-        val produtorDto = buscarOuCriarProdutor(user.id, email, consistenteId)
-            ?: ProdutorDto(
-                id        = consistenteId,
-                userId    = user.id,
-                nome      = email.substringBefore("@").replaceFirstChar { it.uppercase() },
-                municipio = "",
-                estado    = "CE"
-            ).also { Log.w("Auth", "Usando ID consistente para userId=${user.id}") }
+        // BUSCA O PRODUTOR REAL NO SUPABASE PELO USER_ID FIXO (ID imutável da conta)
+        val produtorDto = buscarProdutorPeloUserId(user.id)
+            ?: run {
+                // Se for a primeira vez absoluta deste usuário, cria o perfil com ID consistente
+                val consistenteId = java.util.UUID.nameUUIDFromBytes(user.id.toByteArray()).toString()
+                val novo = ProdutorDto(
+                    id        = consistenteId,
+                    userId    = user.id,
+                    nome      = email.substringBefore("@").replaceFirstChar { it.uppercase() },
+                    municipio = "",
+                    estado    = "CE"
+                )
+                try {
+                    client.from("genia_produtor").upsert(novo)
+                } catch (_: Exception) {}
+                novo
+            }
 
         val entity = ProdutorEntity(
             supabaseId  = produtorDto.id ?: java.util.UUID.nameUUIDFromBytes(user.id.toByteArray()).toString(),
@@ -68,12 +73,28 @@ class AuthRepository(
             cpf         = produtorDto.cpf ?: "",
             telefone    = produtorDto.telefone ?: ""
         )
+        
+        // LIMPEZA: Remove qualquer produtor antigo logado neste celular
+        produtorDao.limparTodos()
         produtorDao.salvar(entity)
+        
         SupabaseConfig.saveProdutorId(context, entity.supabaseId)
         SupabaseConfig.saveEmail(context, email)
         SupabaseConfig.setLogado(context, true)
-        Log.d("Auth", "Login online OK: ${entity.email} — produtorId=${entity.supabaseId}")
+        
+        Log.d("Auth", "Login Sincronizado: ${entity.nome} (ID=${entity.supabaseId})")
         return Result.success(entity)
+    }
+
+    suspend fun buscarProdutorPeloUserId(userId: String): ProdutorDto? {
+        return try {
+            client.from("genia_produtor")
+                .select { filter { eq("user_id", userId) } }
+                .decodeList<ProdutorDto>()
+                .firstOrNull()
+        } catch (e: Exception) {
+            null
+        }
     }
 
     suspend fun loginOffline(email: String, senha: String): Result<ProdutorEntity> {
