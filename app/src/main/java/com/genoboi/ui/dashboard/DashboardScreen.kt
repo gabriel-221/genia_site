@@ -51,19 +51,16 @@ fun DashboardScreen(
         Triple(Especie.CAPRINO, caprinos, if (totalAnimais > 0) caprinos.toFloat() / totalAnimais else 0f)
     ).filter { it.second > 0 }
 
-    // Nome do produtor
+    // Nome do produtor (observado para atualizar após sync)
     val db = remember { AppDatabase.getInstance(context) }
-    var nomeProdutor by remember { mutableStateOf("") }
-    var nomeFazenda  by remember { mutableStateOf("") }
-    LaunchedEffect(Unit) {
-        val produtor = db.produtorDao().buscarAtual()
-        nomeProdutor = produtor?.nome?.substringBefore(" ") ?: run {
-            SupabaseConfig.getEmail(context)?.substringBefore("@") ?: "Produtor"
-        }
-        nomeFazenda = produtor?.nomeFazenda?.ifBlank { null }
-            ?: produtor?.municipio?.ifBlank { null }
-            ?: "GENIA"
+    val produtorLocal by db.produtorDao().observarAtual().collectAsState(initial = null)
+    
+    val nomeProdutor = produtorLocal?.nome?.substringBefore(" ") ?: run {
+        SupabaseConfig.getEmail(context)?.substringBefore("@") ?: "Produtor"
     }
+    val nomeFazenda = produtorLocal?.nomeFazenda?.ifBlank { null }
+        ?: produtorLocal?.municipio?.ifBlank { null }
+        ?: "GENIA"
 
     LazyColumn(
         modifier       = Modifier.fillMaxSize().background(GenoGray50),

@@ -1,19 +1,17 @@
 package com.genoboi.data.remote
 
 import android.content.Context
+import com.genoboi.BuildConfig
 import io.github.jan.supabase.createSupabaseClient
 import io.github.jan.supabase.postgrest.Postgrest
 import io.github.jan.supabase.gotrue.Auth
 
 object SupabaseConfig {
 
-    private const val URL      = "https://dlisrdfajsppsquakwlu.supabase.co"
-    private const val ANON_KEY = "sb_publishable_NfeQH4fdJO1bgyxg4PSJgg_UPdHnt7L"
-
     val client by lazy {
         createSupabaseClient(
-            supabaseUrl = URL,
-            supabaseKey = ANON_KEY
+            supabaseUrl = BuildConfig.SUPABASE_URL,
+            supabaseKey = BuildConfig.SUPABASE_ANON_KEY
         ) {
             install(Postgrest)
             install(Auth)

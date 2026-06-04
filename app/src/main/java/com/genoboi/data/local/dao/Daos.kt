@@ -11,7 +11,7 @@ import kotlinx.coroutines.flow.Flow
 interface ProdutorDao {
 
     @Query("SELECT * FROM produtores LIMIT 1")
-    suspend fun buscarAtual(): ProdutorEntity?
+    fun observarAtual(): Flow<ProdutorEntity?>
 
     @Query("SELECT * FROM produtores WHERE email = :email LIMIT 1")
     suspend fun buscarPorEmail(email: String): ProdutorEntity?
@@ -61,6 +61,9 @@ interface AnimalDao {
 
     @Query("SELECT * FROM animais WHERE supabaseId = :supabaseId LIMIT 1")
     suspend fun buscarPorSupabaseId(supabaseId: String): AnimalEntity?
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun salvarProdutor(produtor: ProdutorEntity)
 }
 
 @Dao

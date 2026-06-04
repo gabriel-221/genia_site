@@ -131,6 +131,31 @@ class AnimalRepository(
     suspend fun sincronizarDeRemoto() {
         val remote = remoteRepo ?: return
         val produtorId = remote.getProdutorId() ?: return
+        
+        // Antes de sincronizar animais, garante que o perfil local está batendo com o do servidor
+        try {
+            val user = remote.getUsuarioLogado()
+            if (user != null) {
+                val produtorDto = remote.buscarProdutorPorUserId(user.id)
+                if (produtorDto != null) {
+                    val entity = ProdutorEntity(
+                        supabaseId = produtorDto.id ?: "",
+                        userId = user.id,
+                        email = user.email ?: "",
+                        senhaHash = "", // não guardamos senha na sync
+                        nome = produtorDto.nome,
+                        nomeFazenda = produtorDto.nomeFazenda ?: "",
+                        municipio = produtorDto.municipio,
+                        estado = produtorDto.estado
+                    )
+                    animalDao.salvarProdutor(entity)
+                    Log.d("Supabase", "Perfil local atualizado: ${produtorDto.nome}")
+                }
+            }
+        } catch (e: Exception) {
+            Log.w("Supabase", "Não foi possível atualizar perfil: ${e.message}")
+        }
+
         try {
             val remotos = remote.listarAnimais()
             for (dto in remotos) {

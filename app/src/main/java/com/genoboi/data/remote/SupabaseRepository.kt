@@ -22,6 +22,19 @@ class SupabaseRepository(private val context: Context) {
         }
     }
 
+    fun getUsuarioLogado() = client.auth.currentUserOrNull()
+
+    suspend fun buscarProdutorPorUserId(userId: String): ProdutorDto? {
+        return try {
+            client.from("genia_produtor")
+                .select { filter { eq("user_id", userId) } }
+                .decodeList<ProdutorDto>()
+                .firstOrNull()
+        } catch (e: Exception) {
+            null
+        }
+    }
+
     // ── Produtor ──────────────────────────────────────────────────────────────
 
     suspend fun garantirProdutor(): String {
