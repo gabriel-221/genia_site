@@ -43,10 +43,10 @@ class AuthRepository(
         val user = client.auth.currentUserOrNull()
             ?: return Result.failure(Exception("Autenticação falhou. Tente novamente."))
 
-        // BUSCA O PRODUTOR REAL NO SUPABASE PELO USER_ID FIXO (ID imutável da conta)
+        // BUSCA O PRODUTOR REAL NO SUPABASE PELO USER_ID FIXO
         val produtorDto = buscarProdutorPeloUserId(user.id)
             ?: run {
-                // Se for a primeira vez absoluta deste usuário, cria o perfil com ID consistente
+                // Se não existir, cria o perfil inicial usando o ID fixo derivado do e-mail
                 val consistenteId = java.util.UUID.nameUUIDFromBytes(user.id.toByteArray()).toString()
                 val novo = ProdutorDto(
                     id        = consistenteId,
@@ -61,8 +61,12 @@ class AuthRepository(
                 novo
             }
 
+        // LIMPEZA TOTAL ANTES DE SINCRONIZAR: 
+        // Se mudou de conta ou reinstalou, o celular deve estar limpo para receber a "verdade" do servidor.
+        produtorDao.limparTodos()
+        
         val entity = ProdutorEntity(
-            supabaseId  = produtorDto.id ?: java.util.UUID.nameUUIDFromBytes(user.id.toByteArray()).toString(),
+            supabaseId  = produtorDto.id!!,
             userId      = user.id,
             email       = email,
             senhaHash   = hashSenha(senha),
@@ -73,16 +77,11 @@ class AuthRepository(
             cpf         = produtorDto.cpf ?: "",
             telefone    = produtorDto.telefone ?: ""
         )
-        
-        // LIMPEZA: Remove qualquer produtor antigo logado neste celular
-        produtorDao.limparTodos()
         produtorDao.salvar(entity)
-        
         SupabaseConfig.saveProdutorId(context, entity.supabaseId)
         SupabaseConfig.saveEmail(context, email)
         SupabaseConfig.setLogado(context, true)
         
-        Log.d("Auth", "Login Sincronizado: ${entity.nome} (ID=${entity.supabaseId})")
         return Result.success(entity)
     }
 
