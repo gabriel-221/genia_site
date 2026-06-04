@@ -31,12 +31,17 @@ class AiCopilotRepository {
             val systemPrompt = buildSystemPrompt(animais)
             val messages = JSONArray()
 
-            historico.forEach { (role, content) ->
+            // Filtra o histórico para garantir que comece com uma mensagem do usuário (exigência da Anthropic)
+            val historicoValido = historico.dropWhile { it.first != "user" }
+
+            historicoValido.forEach { (role, content) ->
                 messages.put(JSONObject().apply {
                     put("role", role)
                     put("content", content)
                 })
             }
+            
+            // Adiciona a mensagem atual do usuário
             messages.put(JSONObject().apply {
                 put("role", "user")
                 put("content", mensagem)
@@ -45,16 +50,16 @@ class AiCopilotRepository {
             val body = JSONObject().apply {
                 put("model", "claude-3-haiku-20240307")
                 put("max_tokens", 1024)
-                put("system", systemPrompt)
+                put("system", systemPrompt.trim())
                 put("messages", messages)
             }
 
             val request = Request.Builder()
                 .url("https://api.anthropic.com/v1/messages")
-                .addHeader("x-api-key", BuildConfig.CLAUDE_API_KEY)
+                .addHeader("x-api-key", BuildConfig.CLAUDE_API_KEY.trim())
                 .addHeader("anthropic-version", "2023-06-01")
-                .addHeader("content-type", "application/json")
-                .post(body.toString().toRequestBody("application/json".toMediaType()))
+                .addHeader("Content-Type", "application/json")
+                .post(body.toString().toRequestBody("application/json; charset=utf-8".toMediaType()))
                 .build()
 
             val response = client.newCall(request).execute()
