@@ -194,6 +194,9 @@ class AuthRepository(
                 Exception("Este e-mail já está cadastrado.")
             msg.contains("Password should be", ignoreCase = true) ->
                 Exception("A senha deve ter pelo menos 6 caracteres.")
+            msg.contains("email rate limit", ignoreCase = true) ||
+            msg.contains("rate limit", ignoreCase = true) ->
+                Exception("Muitos cadastros em pouco tempo. Aguarde alguns minutos e tente novamente.")
             else -> Exception("Erro: $msg")
         }
     }
