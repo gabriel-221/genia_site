@@ -253,13 +253,4 @@ app/src/main/java/com/genoboi/
 
 ---
 
-## Equipe
 
-| Nome | GitHub | Papel |
-|---|---|---|
-| Gabriel Sena | @gabriel2senag | Tech Lead / Android |
-| João Augusto | @JoaoAugusto1374 | Android / IA Genética |
-
----
-
-Desenvolvido para o **Hackathon ARCE 2026**
