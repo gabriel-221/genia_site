@@ -28,17 +28,24 @@ class SupabaseRepository(private val context: Context) {
         val cached = SupabaseConfig.getProdutorId(context)
         if (cached != null) return cached
 
-        val novoId = java.util.UUID.randomUUID().toString()
+        // Tenta pegar o ID do usuário logado se o cache falhou
+        val userId = client.auth.currentUserOrNull()?.id
+        val idParaUsar = if (userId != null) {
+            java.util.UUID.nameUUIDFromBytes(userId.toByteArray()).toString()
+        } else {
+            java.util.UUID.randomUUID().toString()
+        }
+
         try {
             client.from("genia_produtor").upsert(
-                ProdutorDto(id = novoId, nome = "GENIA App")
+                ProdutorDto(id = idParaUsar, nome = "GENIA App")
             )
-            SupabaseConfig.saveProdutorId(context, novoId)
-            Log.d("Supabase", "Produtor criado fallback: $novoId")
+            SupabaseConfig.saveProdutorId(context, idParaUsar)
+            Log.d("Supabase", "Produtor garantido: $idParaUsar")
         } catch (e: Exception) {
-            Log.e("Supabase", "Erro ao criar produtor fallback: ${e.message}")
+            Log.e("Supabase", "Erro ao garantir produtor: ${e.message}")
         }
-        return novoId
+        return idParaUsar
     }
 
     // ── Animais ───────────────────────────────────────────────────────────────

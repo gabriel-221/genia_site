@@ -43,16 +43,18 @@ class AuthRepository(
         val user = client.auth.currentUserOrNull()
             ?: return Result.failure(Exception("Autenticação falhou. Tente novamente."))
 
-        // Tenta buscar/criar produtor no Supabase; se falhar, cria localmente com UUID derivado
-        // do userId para garantir consistência entre dispositivos mesmo sem acesso ao Supabase.
-        val produtorDto = buscarOuCriarProdutor(user.id, email)
+        // Gera um ID consistente baseado no UID do Supabase Auth.
+        // Isso garante que o produtor_id seja o mesmo em qualquer dispositivo/instalação.
+        val consistenteId = java.util.UUID.nameUUIDFromBytes(user.id.toByteArray()).toString()
+
+        val produtorDto = buscarOuCriarProdutor(user.id, email, consistenteId)
             ?: ProdutorDto(
-                id        = java.util.UUID.nameUUIDFromBytes(user.id.toByteArray()).toString(),
+                id        = consistenteId,
                 userId    = user.id,
                 nome      = email.substringBefore("@").replaceFirstChar { it.uppercase() },
                 municipio = "",
                 estado    = "CE"
-            ).also { Log.w("Auth", "Usando produtor local fallback para userId=${user.id}") }
+            ).also { Log.w("Auth", "Usando ID consistente para userId=${user.id}") }
 
         val entity = ProdutorEntity(
             supabaseId  = produtorDto.id ?: java.util.UUID.nameUUIDFromBytes(user.id.toByteArray()).toString(),
@@ -184,28 +186,26 @@ class AuthRepository(
     fun getSavedEmail(): String? = SupabaseConfig.getEmail(context)
 
     // Retorna null em vez de UUID aleatório — força o caller a tratar o erro
-    private suspend fun buscarOuCriarProdutor(userId: String, email: String): ProdutorDto? {
+    private suspend fun buscarOuCriarProdutor(userId: String, email: String, fallbackId: String): ProdutorDto? {
         return try {
             val lista = client.from("genia_produtor")
                 .select { filter { eq("user_id", userId) } }
                 .decodeList<ProdutorDto>()
 
             lista.firstOrNull() ?: run {
-                val novoId = UUID.randomUUID().toString()
                 val dto = ProdutorDto(
-                    id        = novoId,
+                    id        = fallbackId,
                     userId    = userId,
                     nome      = email.substringBefore("@"),
                     municipio = "",
                     estado    = "CE"
                 )
                 client.from("genia_produtor").upsert(dto)
-                Log.d("Auth", "Produtor criado automaticamente: $novoId para userId=$userId")
+                Log.d("Auth", "Produtor criado: $fallbackId para userId=$userId")
                 dto
             }
         } catch (e: Exception) {
             Log.e("Auth", "Erro ao buscar/criar produtor: ${e.message}")
-            // Retorna null — NÃO cria UUID aleatório que quebraria o sync
             null
         }
     }
