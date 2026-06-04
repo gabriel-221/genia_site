@@ -1,5 +1,6 @@
 package com.genoboi.ui.dashboard
 
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -17,6 +18,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import java.util.Locale
 import com.genoboi.data.repository.AnimalRepository
 import com.genoboi.domain.model.Especie
 import com.genoboi.domain.model.Sexo
@@ -69,9 +71,12 @@ fun RelatoriosScreen(
         ) {
             // Filtro espécie
             Text("Filtrar por espécie", fontWeight = FontWeight.Bold, fontSize = 14.sp)
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
                 FilterButton("Todos", especieSelecionada == null) { especieSelecionada = null }
-                Especie.values().forEach { esp ->
+                Especie.entries.forEach { esp ->
                     FilterButton(esp.label, especieSelecionada == esp) { especieSelecionada = esp }
                 }
             }
@@ -127,17 +132,17 @@ fun RelatoriosScreen(
                 MetricRow("Animais totais",    "$total",  Icons.Default.Pets)
                 MetricRow("Fêmeas",            "$femeas", null)
                 MetricRow("Em gestação",        "$prenhas", Icons.Default.Favorite)
-                MetricRow("Média de partos",   String.format("%.1f", mediaPartos), Icons.AutoMirrored.Filled.ShowChart)
-                MetricRow("Média ECC (fêmeas)", String.format("%.1f", mediaECC), null)
+                MetricRow("Média de partos",   String.format(Locale.getDefault(), "%.1f", mediaPartos), Icons.AutoMirrored.Filled.ShowChart)
+                MetricRow("Média ECC (fêmeas)", String.format(Locale.getDefault(), "%.1f", mediaECC), null)
             }
 
             // Genética
             ReportSection(titulo = "Genética") {
                 MetricRow("Peso médio", "${mediaPeso.toInt()} kg", Icons.AutoMirrored.Filled.TrendingUp)
                 if (machos > 0)
-                    MetricRow("Qld. seminal média", String.format("%.1f / 5", mediaQldSemen), Icons.Default.Science)
+                    MetricRow("Qld. seminal média", String.format(Locale.getDefault(), "%.1f / 5", mediaQldSemen), Icons.Default.Science)
                 if (mediaLeite > 0)
-                    MetricRow("Produção leite média", String.format("%.1f L/dia", mediaLeite), Icons.Default.WaterDrop)
+                    MetricRow("Produção leite média", String.format(Locale.getDefault(), "%.1f L/dia", mediaLeite), Icons.Default.WaterDrop)
                 val disponivelMatch = animais.count { it.disponivelMatch }
                 MetricRow("Disponíveis no GeneMatch", "$disponivelMatch", Icons.Default.Favorite)
             }
