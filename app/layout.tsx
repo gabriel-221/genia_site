@@ -1,6 +1,5 @@
 import type { Metadata, Viewport } from 'next'
 import localFont from 'next/font/local'
-import VLibras from '@/components/VLibras'
 import './globals.css'
 
 const geistSans = localFont({
@@ -31,6 +30,24 @@ export const viewport: Viewport = {
   themeColor: '#1F5C36',
 }
 
+// Script VLibras como string — injetado direto no HTML sem passar pelo React
+const vlibrasScript = `
+(function() {
+  if (document.querySelector('[vw]')) return;
+  var c = document.createElement('div');
+  c.setAttribute('vw', '');
+  c.className = 'enabled';
+  c.innerHTML = '<div vw-access-button class="active"></div><div vw-plugin-wrapper><div class="vw-plugin-top-wrapper"></div></div>';
+  document.body.appendChild(c);
+  var s = document.createElement('script');
+  s.src = 'https://vlibras.gov.br/app/vlibras-plugin.js';
+  s.onload = function() {
+    if (window.VLibras) new window.VLibras.Widget('https://vlibras.gov.br/app');
+  };
+  document.body.appendChild(s);
+})();
+`
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="pt-BR">
@@ -53,8 +70,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           {children}
         </main>
 
-        {/* VLibras — Tradutor de Libras (Língua Brasileira de Sinais) */}
-        <VLibras />
+        {/*
+          VLibras — Tradutor de Língua Brasileira de Sinais
+          Inline script sem intermediário React — garante execução
+          independente do ciclo de vida dos componentes.
+        */}
+        <script dangerouslySetInnerHTML={{ __html: vlibrasScript }} />
       </body>
     </html>
   )
