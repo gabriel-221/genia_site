@@ -119,7 +119,7 @@ fun GenoNavGraph(
         }
 
         composable(Screen.Match.route) {
-            GeneMatchScreen()
+            GeneMatchScreen(repository)
         }
 
         composable(Screen.Calendario.route) {

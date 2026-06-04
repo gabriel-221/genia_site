@@ -45,6 +45,7 @@ data class AnimalDto(
     @SerialName("filhos_matriz")        val filhosMatriz: Int = 0,
     @SerialName("qualidade_semen")      val qualidadeSemen: Double = 3.0,
     @SerialName("filhos_macho")         val filhosMacho: Int = 0,
+    @SerialName("producao_leite_diaria") val producaoLeiteDiaria: Double = 0.0,
     @SerialName("chance_prenhez")       val chancePrenhez: Double? = null,
     val prenhou: Boolean = false,
     @SerialName("disponivel_match")     val disponivelMatch: Boolean = true
@@ -73,6 +74,7 @@ fun Animal.toDto(produtorId: String): AnimalDto = AnimalDto(
     filhosMatriz     = filhosNascidosMatriz,
     qualidadeSemen   = qualidadeSemenMacho.toDouble(),
     filhosMacho      = filhosNascidosMacho,
+    producaoLeiteDiaria = producaoLeiteDiaria.toDouble(),
     chancePrenhez    = if (chancePrenhezGerada > 0) chancePrenhezGerada.toDouble() else null,
     prenhou          = prenhou,
     disponivelMatch  = disponivelMatch
@@ -105,6 +107,7 @@ fun AnimalDto.toDomain(localId: Long = 0): Animal = Animal(
     filhosNascidosMatriz = filhosMatriz,
     qualidadeSemenMacho  = qualidadeSemen.toFloat(),
     filhosNascidosMacho  = filhosMacho,
+    producaoLeiteDiaria  = producaoLeiteDiaria.toFloat(),
     chancePrenhezGerada  = chancePrenhez?.toFloat() ?: 0f,
     prenhou              = prenhou,
     disponivelMatch      = disponivelMatch

@@ -1,8 +1,6 @@
 package com.genoboi.ui.match
 
-import androidx.compose.animation.*
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -10,6 +8,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -24,15 +23,21 @@ import androidx.compose.ui.unit.sp
 import com.genoboi.domain.model.*
 import com.genoboi.ui.theme.*
 
-@Composable
-fun GeneMatchScreen() {
-    var step by remember { mutableIntStateOf(1) } // 1: Pergunta, 2: Comparação
-    var objetivo by remember { mutableStateOf("") }
-    var localizacao by remember { mutableStateOf("Local") }
+import com.genoboi.data.ml.GeneticRankingHelper
+import com.genoboi.data.ml.ScoredAnimal
+import com.genoboi.data.repository.AnimalRepository
+import java.util.Locale
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 
-    val matriz = MockData.animalFrida
-    val reprodutor = MockData.reprodutores.first().reprodutor
-    val score = MockData.reprodutores.first().scoreCompatibilidade
+@Composable
+fun GeneMatchScreen(repository: AnimalRepository) {
+    var step by remember { mutableIntStateOf(1) } // 1: Pergunta, 2: Ranking
+    var objetivo by remember { mutableStateOf("") }
+    var ranking by remember { mutableStateOf<List<ScoredAnimal>>(emptyList()) }
+    var isLoading by remember { mutableStateOf(false) }
+
+    val scope = rememberCoroutineScope()
 
     Column(
         Modifier
@@ -48,6 +53,11 @@ fun GeneMatchScreen() {
                     .padding(horizontal = 20.dp, vertical = 14.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                if (step == 2) {
+                    IconButton(onClick = { step = 1 }) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, null)
+                    }
+                }
                 Column(Modifier.weight(1f)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Default.Favorite, null, tint = GenoGreen700,
@@ -56,7 +66,7 @@ fun GeneMatchScreen() {
                         Text("GeneMatch", fontWeight = FontWeight.ExtraBold,
                             fontSize = 20.sp, color = GenoGreen800)
                     }
-                    Text("Inteligência Genética GENIA",
+                    Text("Ranqueamento por Objetivo Genético",
                         fontSize = 12.sp, color = GenoGray600)
                 }
             }
@@ -72,7 +82,7 @@ fun GeneMatchScreen() {
                 verticalArrangement = Arrangement.spacedBy(24.dp)
             ) {
                 Text(
-                    "O que você quer aumentar?",
+                    "Qual o seu objetivo genético?",
                     fontSize = 20.sp,
                     fontWeight = FontWeight.Bold,
                     textAlign = TextAlign.Center,
@@ -85,98 +95,148 @@ fun GeneMatchScreen() {
                     ObjetivoButton("Fertilidade", "🌱", objetivo == "Fertilidade", Modifier.weight(1f)) { objetivo = "Fertilidade" }
                 }
 
-                Spacer(Modifier.height(8.dp))
-
-                Text(
-                    "Preferência de Localização",
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = GenoGray900
-                )
-
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    FilterChip(
-                        selected = localizacao == "Local",
-                        onClick = { localizacao = "Local" },
-                        label = { Text("Match Local") },
-                        modifier = Modifier.weight(1f),
-                        colors = FilterChipDefaults.filterChipColors(selectedContainerColor = GenoGreen100, selectedLabelColor = GenoGreen800)
-                    )
-                    FilterChip(
-                        selected = localizacao == "Externo",
-                        onClick = { localizacao = "Externo" },
-                        label = { Text("Externo (Geral)") },
-                        modifier = Modifier.weight(1f),
-                        colors = FilterChipDefaults.filterChipColors(selectedContainerColor = GenoGreen100, selectedLabelColor = GenoGreen800)
-                    )
+                Spacer(Modifier.height(16.dp))
+                
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = GenoGreen50.copy(alpha = 0.5f)),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.Info, null, tint = GenoGreen800, modifier = Modifier.size(20.dp))
+                        Spacer(Modifier.width(12.dp))
+                        Text(
+                            "O GENIA analisará seu plantel e ranqueará os melhores animais com base em critérios técnicos de cada objetivo.",
+                            fontSize = 12.sp, color = GenoGreen900
+                        )
+                    }
                 }
 
                 Spacer(Modifier.weight(1f))
 
                 Button(
-                    onClick = { if (objetivo.isNotEmpty()) step = 2 },
+                    onClick = { 
+                        if (objetivo.isNotEmpty()) {
+                            isLoading = true
+                            scope.launch {
+                                try {
+                                    val animais = repository.observarAnimais().first()
+                                    ranking = GeneticRankingHelper.ranquearAnimais(objetivo, animais)
+                                    step = 2
+                                } finally {
+                                    isLoading = false
+                                }
+                            }
+                        }
+                    },
                     modifier = Modifier.fillMaxWidth().height(56.dp),
                     shape = RoundedCornerShape(12.dp),
-                    enabled = objetivo.isNotEmpty(),
+                    enabled = objetivo.isNotEmpty() && !isLoading,
                     colors = ButtonDefaults.buttonColors(containerColor = GenoGreen800, contentColor = Color.White)
                 ) {
-                    Text("BUSCAR MELHOR MATCH", fontWeight = FontWeight.Bold)
+                    if (isLoading) {
+                        CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
+                    } else {
+                        Text("RANQUEAR ANIMAIS", fontWeight = FontWeight.Bold)
+                    }
                 }
             }
         } else {
-            // Passo 2: Comparação Lado a Lado
+            // Passo 2: Ranking de Animais
             Column(
                 Modifier
                     .fillMaxSize()
+                    .verticalScroll(rememberScrollState())
                     .padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
+                verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                // Score de Match
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = GenoGreen800)
-                ) {
-                    Column(Modifier.padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text("COMPATIBILIDADE IDEAL", color = Color.White.copy(alpha = 0.8f), fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                        Text("$score%", color = Color.White, fontSize = 48.sp, fontWeight = FontWeight.ExtraBold)
-                        Text("Foco: $objetivo ($localizacao)", color = Color.White.copy(alpha = 0.9f), fontSize = 14.sp)
+                Text(
+                    "Resultados: $objetivo",
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = GenoGray900
+                )
+
+                if (ranking.isEmpty()) {
+                    Box(Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
+                        Text("Nenhum animal cadastrado para ranqueamento.", color = GenoGray600)
                     }
                 }
 
-                // Casal Lado a Lado
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    MatchAnimalCard(matriz, "MATRIZ", Modifier.weight(1f))
-                    MatchAnimalCard(reprodutor, "REPRODUTOR", Modifier.weight(1f))
+                ranking.forEachIndexed { index, item ->
+                    RankingCard(index + 1, item)
                 }
+                
+                Spacer(Modifier.height(24.dp))
+            }
+        }
+    }
+}
 
-                Spacer(Modifier.weight(1f))
+@Composable
+fun RankingCard(posicao: Int, item: ScoredAnimal) {
+    val a = item.animal
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(containerColor = GenoWhite),
+        elevation = CardDefaults.cardElevation(2.dp)
+    ) {
+        Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+            // Posição
+            Box(
+                Modifier.size(32.dp).background(
+                    if (posicao == 1) Color(0xFFFFD700) else GenoGray100,
+                    CircleShape
+                ),
+                contentAlignment = Alignment.Center
+            ) {
+                Text("$posicao", fontWeight = FontWeight.Bold, color = if (posicao == 1) Color(0xFF8B7500) else GenoGray600)
+            }
 
-                // Botões de Ação Existentes
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    OutlinedButton(
-                        onClick = { step = 1; objetivo = "" },
-                        modifier = Modifier.weight(1f).height(56.dp),
-                        shape = RoundedCornerShape(12.dp),
-                        colors = ButtonDefaults.outlinedButtonColors(contentColor = GenoRed),
-                        border = borderStroke(1.dp, GenoRed)
+            Spacer(Modifier.width(16.dp))
+
+            Column(Modifier.weight(1f)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(a.nome, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                    Spacer(Modifier.width(8.dp))
+                    Badge(
+                        containerColor = when(item.classificacao) {
+                            "Elite genética" -> Color(0xFFE3F2FD)
+                            "Alto potencial" -> Color(0xFFE8F5E9)
+                            "Bom desempenho" -> Color(0xFFFFF3E0)
+                            else -> GenoGray100
+                        },
+                        contentColor = when(item.classificacao) {
+                            "Elite genética" -> Color(0xFF1976D2)
+                            "Alto potencial" -> Color(0xFF2E7D32)
+                            "Bom desempenho" -> Color(0xFFE65100)
+                            else -> GenoGray600
+                        }
                     ) {
-                        Icon(Icons.Default.Close, null)
-                        Spacer(Modifier.width(8.dp))
-                        Text("DESCARTAR")
-                    }
-
-                    Button(
-                        onClick = { /* Simular match final */ },
-                        modifier = Modifier.weight(1f).height(56.dp),
-                        shape = RoundedCornerShape(12.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = GenoGreen800, contentColor = Color.White)
-                    ) {
-                        Text("DAR MATCH")
-                        Spacer(Modifier.width(8.dp))
-                        Icon(Icons.Default.Check, null)
+                        Text(item.classificacao, modifier = Modifier.padding(horizontal = 4.dp), fontSize = 10.sp)
                     }
                 }
+                Text("${a.especie.label} • ${a.raca}", fontSize = 12.sp, color = GenoGray600)
+                
+                Spacer(Modifier.height(8.dp))
+                
+                item.fatores.forEach { fator ->
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.CheckCircle, null, tint = GenoGreen600, modifier = Modifier.size(14.dp))
+                        Spacer(Modifier.width(4.dp))
+                        Text(fator, fontSize = 11.sp, color = GenoGray700)
+                    }
+                }
+            }
+
+            Column(horizontalAlignment = Alignment.End) {
+                Text("Score", fontSize = 10.sp, color = GenoGray400)
+                Text(
+                    String.format(Locale.getDefault(), "%.1f", item.scoreFinal),
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = GenoGreen800
+                )
             }
         }
     }

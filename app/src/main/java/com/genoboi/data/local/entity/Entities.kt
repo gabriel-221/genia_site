@@ -47,6 +47,7 @@ data class AnimalEntity(
     val abortos: Int = 0,
     val diasDesdeUltimoParto: Int = 0,
     val filhosNascidosMatriz: Int = 0,
+    val producaoLeiteDiaria: Float = 0f,
 
     // Atributos Macho
     val qualidadeSemenMacho: Float,

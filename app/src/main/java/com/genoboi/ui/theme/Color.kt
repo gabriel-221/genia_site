@@ -19,6 +19,7 @@ val GenoGray100  = Color(0xFFF1F3F4)
 val GenoGray200  = Color(0xFFE8EAED)
 val GenoGray400  = Color(0xFF9AA0A6)
 val GenoGray600  = Color(0xFF5F6368)
+val GenoGray700  = Color(0xFF4D5155)
 val GenoGray800  = Color(0xFF3C4043)
 val GenoGray900  = Color(0xFF202124)
 

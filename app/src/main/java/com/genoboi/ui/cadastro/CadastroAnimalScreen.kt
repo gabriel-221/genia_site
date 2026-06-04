@@ -96,6 +96,7 @@ data class CadastroState(
     val abortos: String = "0",
     val diasDesdeUltimoParto: String = "0",
     val filhosNascidosMatriz: String = "0",
+    val producaoLeite: String = "0",
 
     // Atributos específicos Macho (Reprodutor)
     val qualidadeSemenMacho: String = "",
@@ -440,6 +441,8 @@ fun PassoBasico(estado: CadastroState, onChange: (CadastroState) -> Unit) {
                 CampoTexto("Filhos nascidos", estado.filhosNascidosMatriz,
                     teclado = KeyboardType.Number, modifier = Modifier.weight(1f)) { onChange(estado.copy(filhosNascidosMatriz = it)) }
             }
+            CampoTexto("Produção de Leite (L/dia)", estado.producaoLeite,
+                teclado = KeyboardType.Decimal) { onChange(estado.copy(producaoLeite = it)) }
         } else {
             Text("Histórico do Reprodutor", fontWeight = FontWeight.SemiBold, fontSize = 14.sp, color = GenoGreen800)
             
@@ -508,6 +511,7 @@ fun PassoRevisao(estado: CadastroState, onEditar: (Int) -> Unit) {
                 RevisaoRow("Abortos", estado.abortos)
                 RevisaoRow("Dias pós-parto", estado.diasDesdeUltimoParto)
                 RevisaoRow("Filhos nascidos", estado.filhosNascidosMatriz)
+                RevisaoRow("Prod. Leite", "${estado.producaoLeite} L/dia")
             } else {
                 RevisaoRow("Qld. Sêmen", estado.qualidadeSemenMacho)
                 RevisaoRow("Filhos nascidos", estado.filhosNascidosMacho)
@@ -668,6 +672,7 @@ fun CadastroState.toAnimal(): Animal {
         abortos              = abortos.toIntOrNull() ?: 0,
         diasDesdeUltimoParto = diasDesdeUltimoParto.toIntOrNull() ?: 0,
         filhosNascidosMatriz = filhosNascidosMatriz.toIntOrNull() ?: 0,
+        producaoLeiteDiaria  = producaoLeite.replace(",", ".").toFloatOrNull() ?: 0f,
         qualidadeSemenMacho  = qualidadeSemenMacho.replace(",", ".").toFloatOrNull() ?: 3f,
         filhosNascidosMacho  = filhosNascidosMacho.toIntOrNull() ?: 0,
         disponivelMatch      = disponivelMatch
@@ -695,6 +700,7 @@ fun Animal.toState(): CadastroState {
         abortos              = abortos.toString(),
         diasDesdeUltimoParto = diasDesdeUltimoParto.toString(),
         filhosNascidosMatriz = filhosNascidosMatriz.toString(),
+        producaoLeite        = producaoLeiteDiaria.toString().replace(".", ","),
         qualidadeSemenMacho  = qualidadeSemenMacho.toString().replace(".", ","),
         filhosNascidosMacho  = filhosNascidosMacho.toString(),
         disponivelMatch      = disponivelMatch
