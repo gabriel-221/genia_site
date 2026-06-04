@@ -104,10 +104,11 @@ data class BottomNavItem(
 )
 
 val bottomNavItems = listOf(
-    BottomNavItem(Screen.Dashboard,  "Dashboard", Icons.Default.Home),
-    BottomNavItem(Screen.Animais,    "Animais",   Icons.Default.Pets),
-    BottomNavItem(Screen.Match,      "Match",     Icons.Default.Favorite),
-    BottomNavItem(Screen.Calendario, "Calendário",Icons.Default.CalendarMonth),
+    BottomNavItem(Screen.Dashboard,  "Dashboard",  Icons.Default.Home),
+    BottomNavItem(Screen.Animais,    "Animais",    Icons.Default.Pets),
+    BottomNavItem(Screen.Match,      "Match",      Icons.Default.Favorite),
+    BottomNavItem(Screen.Calendario, "Calendário", Icons.Default.CalendarMonth),
+    BottomNavItem(Screen.Copilot,    "Copilot",    Icons.Default.AutoAwesome),
 )
 
 @Composable

@@ -102,6 +102,7 @@ private fun AppPrincipal(
         Screen.Animais.route,
         Screen.Match.route,
         Screen.Calendario.route,
+        Screen.Copilot.route,
         Screen.AnimalDetalhe.route
     )
 

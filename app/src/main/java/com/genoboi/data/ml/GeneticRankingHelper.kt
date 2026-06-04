@@ -39,7 +39,9 @@ object GeneticRankingHelper {
         val baseScore = when (objetivo) {
             "leite" -> {
                 val fertilityPenalty = (1f - (animal.abortos / 4f)).coerceIn(0.4f, 1f)
-                reproductiveBase * 0.30f + (animal.escoreCorporal / 5f) * 0.24f + prolificidade * 0.20f + fertilityPenalty * 0.14f + (animal.pesoKg / 700f).coerceAtMost(1f) * 0.12f
+                val leiteScore = (animal.producaoLeiteDiaria / 30f).coerceAtMost(1f)
+                val leiteBonus = if (animal.producaoLeiteDiaria > 0f) leiteScore * 0.20f else 0f
+                reproductiveBase * 0.26f + (animal.escoreCorporal / 5f) * 0.20f + prolificidade * 0.16f + fertilityPenalty * 0.12f + (animal.pesoKg / 700f).coerceAtMost(1f) * 0.06f + leiteBonus
             }
             "corte" -> {
                 val weightDivisor = if (animal.sexo == Sexo.MACHO) 1100f else 700f

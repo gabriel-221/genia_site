@@ -707,4 +707,3 @@ fun Animal.toState(): CadastroState {
     )
 }
 
-val GenoGray700 = com.genoboi.ui.theme.GenoGray600

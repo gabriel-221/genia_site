@@ -5,6 +5,13 @@ plugins {
     id 'org.jetbrains.kotlin.plugin.serialization'
 }
 
+// Lê credenciais do local.properties (nunca commitado)
+def localProperties = new Properties()
+def localPropertiesFile = rootProject.file("local.properties")
+if (localPropertiesFile.exists()) {
+    localPropertiesFile.withReader('UTF-8') { reader -> localProperties.load(reader) }
+}
+
 android {
     namespace 'com.genoboi'
     compileSdk 34
@@ -20,6 +27,10 @@ android {
         vectorDrawables {
             useSupportLibrary true
         }
+
+        buildConfigField "String", "SUPABASE_URL",      "\"${localProperties['SUPABASE_URL'] ?: ''}\""
+        buildConfigField "String", "SUPABASE_ANON_KEY", "\"${localProperties['SUPABASE_ANON_KEY'] ?: ''}\""
+        buildConfigField "String", "CLAUDE_API_KEY",    "\"${localProperties['CLAUDE_API_KEY'] ?: ''}\""
     }
 
     buildTypes {
@@ -40,6 +51,7 @@ android {
 
     buildFeatures {
         compose true
+        buildConfig true
     }
 
     composeOptions {
@@ -87,7 +99,7 @@ dependencies {
     // Coil (imagens)
     implementation 'io.coil-kt:coil-compose:2.6.0'
 
-    // Coroutines (explícito para garantir resolução de imports)
+    // Coroutines
     implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3'
     implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3'
 
@@ -97,6 +109,9 @@ dependencies {
     implementation 'io.github.jan-tennert.supabase:gotrue-kt'
     implementation 'io.ktor:ktor-client-okhttp:2.3.12'
     implementation 'org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.3'
+
+    // OkHttp (Claude API)
+    implementation 'com.squareup.okhttp3:okhttp:4.12.0'
 
     // Debug
     debugImplementation 'androidx.compose.ui:ui-tooling'

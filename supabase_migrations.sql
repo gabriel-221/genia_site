@@ -11,6 +11,12 @@ ALTER TABLE public.genia_animal
   ADD COLUMN IF NOT EXISTS disponivel_match boolean NOT NULL DEFAULT true;
 
 -- -----------------------------------------------------------------------------
+-- 1b. Produção de leite diária (campo adicionado pelo app Android v1.1)
+-- -----------------------------------------------------------------------------
+ALTER TABLE public.genia_animal
+  ADD COLUMN IF NOT EXISTS producao_leite_diaria numeric NOT NULL DEFAULT 0;
+
+-- -----------------------------------------------------------------------------
 -- 2. Garantir que user_id existe e está indexado em genia_produtor
 --    (a coluna já existe no schema original, mas o índice melhora performance)
 -- -----------------------------------------------------------------------------

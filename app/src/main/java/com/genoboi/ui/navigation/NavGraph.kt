@@ -11,6 +11,7 @@ import com.genoboi.data.repository.AnimalRepository
 import com.genoboi.ui.animais.AnimaisScreen
 import com.genoboi.ui.cadastro.CadastroAnimalScreen
 import com.genoboi.ui.calendario.CalendarioScreen
+import com.genoboi.ui.copilot.AiCopilotScreen
 import com.genoboi.ui.dashboard.DashboardScreen
 import com.genoboi.ui.match.GeneMatchScreen
 
@@ -19,6 +20,7 @@ sealed class Screen(val route: String) {
     object Animais      : Screen("animais")
     object Match        : Screen("match")
     object Calendario   : Screen("calendario")
+    object Copilot      : Screen("copilot")
     object Relatorios   : Screen("relatorios")
     object CadastroAnimal : Screen("cadastro_animal?animalId={animalId}") {
         fun createRoute(animalId: Long? = null) = if (animalId != null) "cadastro_animal?animalId=$animalId" else "cadastro_animal"
@@ -42,71 +44,69 @@ fun GenoNavGraph(
     modifier: Modifier = Modifier
 ) {
     NavHost(
-        navController  = navController,
+        navController    = navController,
         startDestination = Screen.Dashboard.route,
-        modifier       = modifier
+        modifier         = modifier
     ) {
         composable(Screen.Dashboard.route) {
             DashboardScreen(
-                onNavigateToAnimais  = { navController.navigate(Screen.Animais.route) },
-                onNavigateToAlertas  = { navController.navigate(Screen.Calendario.route) },
+                onNavigateToAnimais    = { navController.navigate(Screen.Animais.route) },
+                onNavigateToAlertas    = { navController.navigate(Screen.Calendario.route) },
                 onNavigateToRelatorios = { navController.navigate(Screen.Relatorios.route) }
             )
         }
 
         composable(Screen.Animais.route) {
             AnimaisScreen(
-                repository         = repository,
-                onCadastrarAnimal  = { navController.navigate(Screen.CadastroAnimal.createRoute()) },
-                onAnimalClick      = { id -> navController.navigate(Screen.AnimalDetalhe.createRoute(id)) },
+                repository          = repository,
+                onCadastrarAnimal   = { navController.navigate(Screen.CadastroAnimal.createRoute()) },
+                onAnimalClick       = { id -> navController.navigate(Screen.AnimalDetalhe.createRoute(id)) },
                 onSimularCruzamento = { navController.navigate(Screen.SelecaoMatriz.route) }
             )
         }
 
         composable(Screen.SelecaoMatriz.route) {
             com.genoboi.ui.animais.SelecaoMatrizScreen(
-                repository = repository,
+                repository          = repository,
                 onMatrizSelecionada = { id -> navController.navigate(Screen.SelecaoMacho.createRoute(id)) },
-                onVoltar = { navController.popBackStack() }
+                onVoltar            = { navController.popBackStack() }
             )
         }
 
         composable(
-            route = Screen.SelecaoMacho.route,
+            route     = Screen.SelecaoMacho.route,
             arguments = listOf(navArgument("matrizId") { type = NavType.LongType })
         ) { backStackEntry ->
             val matrizId = backStackEntry.arguments?.getLong("matrizId") ?: 0L
             com.genoboi.ui.animais.SelecaoMachoScreen(
-                matrizId = matrizId,
-                repository = repository,
-                onMachoSelecionado = { mId, rId -> 
-                    navController.navigate(Screen.ResultadoSimulacao.createRoute(mId, rId)) 
+                matrizId          = matrizId,
+                repository        = repository,
+                onMachoSelecionado = { mId, rId ->
+                    navController.navigate(Screen.ResultadoSimulacao.createRoute(mId, rId))
                 },
                 onVoltar = { navController.popBackStack() }
             )
         }
 
         composable(
-            route = Screen.ResultadoSimulacao.route,
+            route     = Screen.ResultadoSimulacao.route,
             arguments = listOf(
                 navArgument("matrizId") { type = NavType.LongType },
-                navArgument("machoId") { type = NavType.LongType }
+                navArgument("machoId")  { type = NavType.LongType }
             )
         ) { backStackEntry ->
             val matrizId = backStackEntry.arguments?.getLong("matrizId") ?: 0L
-            val machoId = backStackEntry.arguments?.getLong("machoId") ?: 0L
+            val machoId  = backStackEntry.arguments?.getLong("machoId")  ?: 0L
             com.genoboi.ui.animais.ResultadoSimulacaoScreen(
-                matrizId = matrizId,
-                machoId = machoId,
+                matrizId  = matrizId,
+                machoId   = machoId,
                 repository = repository,
-                onFinalizar = {
-                    navController.popBackStack(Screen.Animais.route, inclusive = false)
-                }
+                onFinalizar = { navController.popBackStack(Screen.Animais.route, inclusive = false) }
             )
         }
 
         composable(
-            route = Screen.AnimalDetalhe.route,
+            route     = Screen.AnimalDetalhe.route,
             arguments = listOf(navArgument("animalId") { type = NavType.LongType })
         ) { backStackEntry ->
             val animalId = backStackEntry.arguments?.getLong("animalId") ?: 0L
@@ -122,6 +122,10 @@ fun GenoNavGraph(
             GeneMatchScreen(repository)
         }
 
+        composable(Screen.Copilot.route) {
+            AiCopilotScreen(repository)
+        }
+
         composable(Screen.Calendario.route) {
             CalendarioScreen()
         }
@@ -133,9 +137,9 @@ fun GenoNavGraph(
         }
 
         composable(
-            route = Screen.CadastroAnimal.route,
+            route     = Screen.CadastroAnimal.route,
             arguments = listOf(navArgument("animalId") {
-                type = NavType.LongType
+                type         = NavType.LongType
                 defaultValue = -1L
             })
         ) { backStackEntry ->
