@@ -43,11 +43,19 @@ class AuthRepository(
         val user = client.auth.currentUserOrNull()
             ?: return Result.failure(Exception("Autenticação falhou. Tente novamente."))
 
+        // Tenta buscar/criar produtor no Supabase; se falhar, cria localmente com UUID derivado
+        // do userId para garantir consistência entre dispositivos mesmo sem acesso ao Supabase.
         val produtorDto = buscarOuCriarProdutor(user.id, email)
-            ?: return Result.failure(Exception("Erro ao buscar dados do produtor. Tente novamente."))
+            ?: ProdutorDto(
+                id        = java.util.UUID.nameUUIDFromBytes(user.id.toByteArray()).toString(),
+                userId    = user.id,
+                nome      = email.substringBefore("@").replaceFirstChar { it.uppercase() },
+                municipio = "",
+                estado    = "CE"
+            ).also { Log.w("Auth", "Usando produtor local fallback para userId=${user.id}") }
 
         val entity = ProdutorEntity(
-            supabaseId  = produtorDto.id ?: return Result.failure(Exception("ID do produtor inválido.")),
+            supabaseId  = produtorDto.id ?: java.util.UUID.nameUUIDFromBytes(user.id.toByteArray()).toString(),
             userId      = user.id,
             email       = email,
             senhaHash   = hashSenha(senha),

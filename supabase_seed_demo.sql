@@ -24,7 +24,8 @@ DELETE FROM public.genia_evento_reprodutivo
         'e33951d5-0493-476b-bf11-887099a2f1c2',
         '815855ba-c43e-4a83-ba36-3f093391fa3b',
         '73bab68e-c06b-4bdf-821d-8d1eb036e3e4',
-        '9a0ebc06-0ef9-4d37-a6fa-9eaebe363206'
+        '9a0ebc06-0ef9-4d37-a6fa-9eaebe363206',
+        'fbde59e0-f830-4cd9-9c71-3add833fb1eb'
       )
     )
   );
@@ -39,7 +40,8 @@ DELETE FROM public.genia_animal
       'e33951d5-0493-476b-bf11-887099a2f1c2',
       '815855ba-c43e-4a83-ba36-3f093391fa3b',
       '73bab68e-c06b-4bdf-821d-8d1eb036e3e4',
-      '9a0ebc06-0ef9-4d37-a6fa-9eaebe363206'
+      '9a0ebc06-0ef9-4d37-a6fa-9eaebe363206',
+        'fbde59e0-f830-4cd9-9c71-3add833fb1eb'
     )
   );
 
@@ -51,7 +53,8 @@ DELETE FROM public.genia_produtor
     'e33951d5-0493-476b-bf11-887099a2f1c2',
     '815855ba-c43e-4a83-ba36-3f093391fa3b',
     '73bab68e-c06b-4bdf-821d-8d1eb036e3e4',
-    '9a0ebc06-0ef9-4d37-a6fa-9eaebe363206'
+    '9a0ebc06-0ef9-4d37-a6fa-9eaebe363206',
+        'fbde59e0-f830-4cd9-9c71-3add833fb1eb'
   );
 
 -- =============================================================================
@@ -464,58 +467,39 @@ VALUES
    1, 0, 90, 1, 0, 0, 2.0, false, true);
 
 -- =============================================================================
--- 9. EVENTOS REPRODUTIVOS — exemplos para produtor1 (João)
+-- PRODUTOR MARIANA (marianalemos595@gmail.com — fbde59e0-f830-4cd9-9c71-3add833fb1eb)
+-- Conta já existia no Auth mas sem perfil em genia_produtor — corrigido aqui
 -- =============================================================================
 
-INSERT INTO public.genia_evento_reprodutivo
-  (id, animal_id, tipo, data_evento, semen_reprodutor, tecnico_responsavel,
-   gestacao_confirmada, score_ia_prenhez, observacoes)
+INSERT INTO public.genia_produtor
+  (id, user_id, nome, municipio, estado, nome_fazenda, hectares, telefone)
 VALUES
-  ('e1000001-0000-0000-0000-000000000001', 'a1000003-0000-0000-0000-000000000003',
-   'inseminacao', '2026-04-10', 'Trovão', 'Dr. Carlos Aguiar',
-   true, 0.82, 'Inseminação realizada com sucesso'),
+  ('11111111-0008-0008-0008-000000000008',
+   'fbde59e0-f830-4cd9-9c71-3add833fb1eb',
+   'Mariana Lemos', 'Crateús', 'CE',
+   'Fazenda Santa Mariana', 120, '(88) 99100-0000');
 
-  ('e1000002-0000-0000-0000-000000000002', 'a1000004-0000-0000-0000-000000000004',
-   'inseminacao', '2026-03-28', 'Sultão', 'Dr. Carlos Aguiar',
-   true, 0.78, 'Resultado positivo no diagnóstico'),
-
-  ('e1000003-0000-0000-0000-000000000003', 'a1000005-0000-0000-0000-000000000005',
-   'cio', '2026-05-20', '', '',
-   null, null, 'Cio detectado — aguardando inseminação'),
-
-  ('e1000004-0000-0000-0000-000000000004', 'a1000003-0000-0000-0000-000000000003',
-   'diagnostico', '2026-05-15', '', 'Dr. Carlos Aguiar',
-   true, 0.91, 'Gestação confirmada por ultrassom'),
-
-  ('e1000005-0000-0000-0000-000000000005', 'a1000004-0000-0000-0000-000000000004',
-   'diagnostico', '2026-05-01', '', 'Dr. Carlos Aguiar',
-   true, 0.85, 'Gestação confirmada — 35 dias');
-
--- =============================================================================
--- 10. EVENTOS — produtor 4 (Ana Lúcia • Bovinos leiteiros)
--- =============================================================================
-
-INSERT INTO public.genia_evento_reprodutivo
-  (id, animal_id, tipo, data_evento, semen_reprodutor, tecnico_responsavel,
-   gestacao_confirmada, score_ia_prenhez, observacoes)
+INSERT INTO public.genia_animal
+  (id, produtor_id, nome, especie, raca, sexo, data_nascimento,
+   peso_kg, escore_corporal, fazenda,
+   numero_partos, abortos, dias_ultimo_parto, filhos_matriz,
+   qualidade_semen, filhos_macho, producao_leite_diaria, prenhou, disponivel_match)
 VALUES
-  ('e4000001-0000-0000-0000-000000000001', 'a4000002-0000-0000-0000-000000000002',
-   'inseminacao', '2026-04-05', 'Leite Puro', 'Dra. Patrícia Lins',
-   true, 0.88, 'IA com sêmen de alto potencial leiteiro'),
+  ('a8000001-0000-0000-0000-000000000001', '11111111-0008-0008-0008-000000000008',
+   'Aurora', 'bovino', 'Girolando', 'femea', '2021-06-15',
+   400, 3.7, 'Fazenda Santa Mariana',
+   2, 0, 50, 2, 0, 0, 12.5, true, true),
 
-  ('e4000002-0000-0000-0000-000000000002', 'a4000003-0000-0000-0000-000000000003',
-   'inseminacao', '2026-04-18', 'Leite Puro', 'Dra. Patrícia Lins',
-   true, 0.79, 'Terceira inseminação da estação'),
+  ('a8000002-0000-0000-0000-000000000002', '11111111-0008-0008-0008-000000000008',
+   'Trovador', 'bovino', 'Gir', 'macho', '2020-09-20',
+   510, 4.2, 'Fazenda Santa Mariana',
+   0, 0, 0, 0, 4.5, 18, 0, false, true),
 
-  ('e4000003-0000-0000-0000-000000000003', 'a4000004-0000-0000-0000-000000000004',
-   'cio', '2026-05-28', '', '',
-   null, null, 'Cio intenso — prioridade para inseminação'),
+  ('a8000003-0000-0000-0000-000000000003', '11111111-0008-0008-0008-000000000008',
+   'Clarinha', 'bovino', 'Girolando', 'femea', '2022-04-10',
+   360, 3.4, 'Fazenda Santa Mariana',
+   1, 0, 80, 1, 0, 0, 8.0, false, true);
 
-  ('e4000004-0000-0000-0000-000000000004', 'a4000002-0000-0000-0000-000000000002',
-   'diagnostico', '2026-05-08', '', 'Dra. Patrícia Lins',
-   true, 0.93, 'Gestação confirmada — 33 dias');
-
--- =============================================================================
 -- 11. Reabilita RLS com policies corretas
 -- =============================================================================
 
@@ -532,9 +516,12 @@ ALTER TABLE public.genia_evento_reprodutivo ENABLE ROW LEVEL SECURITY;
 -- Produtor 5 — Pedro Henrique    : 8 animais mistos               — Catunda
 -- Produtor 6 — Raimundo Pereira  : 5 bovinos (Angus/Nelore corte) — Poranga
 -- Produtor 7 — Antônia Bezerra   : 7 caprinos/ovinos              — Independência
+-- Produtor 8 — Mariana Lemos     : 3 bovinos leiteiros            — Crateús
 --
 -- Logins de demonstração (senha: Teste@123):
 --   produtor1@teste.com  produtor2@teste.com  produtor3@teste.com
 --   produtor4@teste.com  produtor5@teste.com  produtor6@teste.com
+-- Conta já existente:
+--   marianalemos595@gmail.com  (perfil criado por este seed)
 --   produtor7@teste.cpm
 -- =============================================================================
