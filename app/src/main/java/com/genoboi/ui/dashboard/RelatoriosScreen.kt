@@ -42,6 +42,11 @@ fun RelatoriosScreen(
     val prenhas   = animais.count { it.prenhou }
     val taxaPrenhez = if (femeas > 0) (prenhas * 100f / femeas) else 0f
 
+    // Média de Probabilidade (IA)
+    val mediaChanceIA = if (femeas > 0) {
+        animais.filter { it.sexo == Sexo.FEMEA }.map { it.chancePrenhezGerada }.average() * 100
+    } else 0.0
+
     val mediaECC  = if (femeas > 0) animais.filter { it.sexo == Sexo.FEMEA }
                         .map { it.escoreCorporal }.average().toFloat() else 0f
     val mediaPeso = if (total > 0) animais.map { it.pesoKg }.average().toFloat() else 0f
@@ -130,6 +135,8 @@ fun RelatoriosScreen(
                     MetricRow("Animais totais",    "$total",  Icons.Default.Pets)
                     MetricRow("Fêmeas",            "$femeas", null)
                     MetricRow("Em gestação",        "$prenhas", Icons.Default.Favorite)
+                    MetricRow("Taxa Prenhez (Real)", "${taxaPrenhez.toInt()}%", null)
+                    MetricRow("Taxa Prenhez (Média IA)", String.format(Locale.getDefault(), "%.1f%%", mediaChanceIA), Icons.Default.Psychology)
                     MetricRow("Média de partos",   String.format(Locale.getDefault(), "%.1f", mediaPartos), Icons.AutoMirrored.Filled.ShowChart)
                     MetricRow("Média ECC (fêmeas)", String.format(Locale.getDefault(), "%.1f", mediaECC), null)
                 }
