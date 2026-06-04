@@ -1,27 +1,29 @@
 package com.genoboi.data.remote
 
 import android.content.Context
-import com.genoboi.BuildConfig
 import io.github.jan.supabase.createSupabaseClient
 import io.github.jan.supabase.postgrest.Postgrest
 import io.github.jan.supabase.gotrue.Auth
 
 object SupabaseConfig {
 
+    private const val URL      = "https://dlisrdfajsppsquakwlu.supabase.co"
+    private const val ANON_KEY = "sb_publishable_NfeQH4fdJO1bgyxg4PSJgg_UPdHnt7L"
+
     val client by lazy {
         createSupabaseClient(
-            supabaseUrl = BuildConfig.SUPABASE_URL,
-            supabaseKey = BuildConfig.SUPABASE_ANON_KEY
+            supabaseUrl = URL,
+            supabaseKey = ANON_KEY
         ) {
             install(Postgrest)
             install(Auth)
         }
     }
 
-    private const val PREFS      = "genoboi_remote_prefs"
-    private const val KEY_PROD   = "produtor_id"
-    private const val KEY_LOGADO = "is_logged_in"
-    private const val KEY_EMAIL  = "user_email"
+    private const val PREFS        = "genoboi_remote_prefs"
+    private const val KEY_PROD     = "produtor_id"
+    private const val KEY_LOGADO   = "is_logged_in"
+    private const val KEY_EMAIL    = "user_email"
 
     fun getProdutorId(context: Context): String? =
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
