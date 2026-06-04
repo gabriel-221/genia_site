@@ -1,0 +1,15 @@
+{
+  "name": "GENIA — Gestão Genética de Rebanhos",
+  "short_name": "GENIA",
+  "description": "Manejo reprodutivo e genético de bovinos, ovinos e caprinos com IA",
+  "start_url": "/dashboard",
+  "display": "standalone",
+  "background_color": "#1F5C36",
+  "theme_color": "#1F5C36",
+  "orientation": "portrait",
+  "icons": [
+    { "src": "/favicon.ico", "sizes": "64x64", "type": "image/x-icon" }
+  ],
+  "categories": ["agriculture", "productivity"],
+  "lang": "pt-BR"
+}
