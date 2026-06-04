@@ -43,7 +43,7 @@ class AiCopilotRepository {
             })
 
             val body = JSONObject().apply {
-                put("model", "claude-haiku-4-5-20251001")
+                put("model", "claude-3-haiku-20240307")
                 put("max_tokens", 1024)
                 put("system", systemPrompt)
                 put("messages", messages)
