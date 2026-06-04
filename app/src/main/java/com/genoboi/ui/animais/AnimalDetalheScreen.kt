@@ -315,7 +315,19 @@ fun AnimalDetalheScreen(
     }
 
     if (showDialogEvento) {
-        DialogNovoEvento(onDismiss = { showDialogEvento = false })
+        DialogNovoEvento(
+        animais = listOf(animal).filterNotNull(),
+        onDismiss = { showDialogEvento = false },
+        onSalvar = { animalId, tipo, data, obs ->
+            scope.launch {
+                val evento = com.genoboi.domain.model.EventoReprodutivo(
+                    animalId = animalId, tipo = tipo, data = data, observacao = obs
+                )
+                repository.salvarEvento(evento)
+            }
+            showDialogEvento = false
+        }
+    )
     }
 
     // ── Dialog NFC ────────────────────────────────────────────────────────────
@@ -424,12 +436,11 @@ fun InfoItem(label: String, valor: String) {
             .padding(vertical = 6.dp),
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        Text(label, fontSize = 14.sp, color = GenoGray500)
+        Text(label, fontSize = 14.sp, color = GenoGray400)
         Text(valor, fontSize = 14.sp, color = GenoGray900, fontWeight = FontWeight.Medium)
     }
 }
 
-val GenoGray500 = Color(0xFF9AA0A6)
 
 // ── NFC status ────────────────────────────────────────────────────────────────
 

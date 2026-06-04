@@ -7,65 +7,95 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.genoboi.domain.model.MockData
-import com.genoboi.domain.model.TipoAlerta
+import com.genoboi.data.local.AppDatabase
+import com.genoboi.data.remote.SupabaseConfig
+import com.genoboi.data.repository.AnimalRepository
+import com.genoboi.domain.model.Especie
+import com.genoboi.domain.model.Sexo
 import com.genoboi.ui.components.*
 import com.genoboi.ui.theme.*
 
 @Composable
 fun DashboardScreen(
+    repository: AnimalRepository,
     onNavigateToAnimais: () -> Unit = {},
     onNavigateToAlertas: () -> Unit = {},
-    onNavigateToRelatorios: () -> Unit = {}
+    onNavigateToRelatorios: () -> Unit = {},
+    onNavigateToCopilot: () -> Unit = {}
 ) {
-    val resumo   = MockData.dashboardResumo
-    val alertas  = MockData.alertas
-    val prenhez  = MockData.prenhez6Meses
-    val especies = MockData.animaisPorEspecie
+    val context = LocalContext.current
+    val animais by repository.observarAnimais().collectAsState(initial = emptyList())
+
+    // Métricas calculadas dos dados reais
+    val totalAnimais   = animais.size
+    val totalFemeas    = animais.count { it.sexo == Sexo.FEMEA }
+    val prenhas        = animais.count { it.prenhou }
+    val taxaPrenhez    = if (totalFemeas > 0) (prenhas * 100 / totalFemeas) else 0
+    val disponivelMatch = animais.count { it.disponivelMatch }
+
+    val bovinos  = animais.count { it.especie == Especie.BOVINO }
+    val ovinos   = animais.count { it.especie == Especie.OVINO }
+    val caprinos = animais.count { it.especie == Especie.CAPRINO }
+    val especiesReais = listOf(
+        Triple(Especie.BOVINO,  bovinos,  if (totalAnimais > 0) bovinos.toFloat()  / totalAnimais else 0f),
+        Triple(Especie.OVINO,   ovinos,   if (totalAnimais > 0) ovinos.toFloat()   / totalAnimais else 0f),
+        Triple(Especie.CAPRINO, caprinos, if (totalAnimais > 0) caprinos.toFloat() / totalAnimais else 0f)
+    ).filter { it.second > 0 }
+
+    // Nome do produtor
+    val db = remember { AppDatabase.getInstance(context) }
+    var nomeProdutor by remember { mutableStateOf("") }
+    var nomeFazenda  by remember { mutableStateOf("") }
+    LaunchedEffect(Unit) {
+        val produtor = db.produtorDao().buscarAtual()
+        nomeProdutor = produtor?.nome?.substringBefore(" ") ?: run {
+            SupabaseConfig.getEmail(context)?.substringBefore("@") ?: "Produtor"
+        }
+        nomeFazenda = produtor?.nomeFazenda?.ifBlank { null }
+            ?: produtor?.municipio?.ifBlank { null }
+            ?: "GENIA"
+    }
 
     LazyColumn(
-        modifier            = Modifier
-            .fillMaxSize()
-            .background(GenoGray50),
-        contentPadding      = PaddingValues(bottom = 24.dp)
+        modifier       = Modifier.fillMaxSize().background(GenoGray50),
+        contentPadding = PaddingValues(bottom = 24.dp)
     ) {
-        // Saudação e Atalho Relatórios
+        // Saudação
         item {
             Column(
-                Modifier
-                    .fillMaxWidth()
-                    .background(GenoWhite)
+                Modifier.fillMaxWidth().background(GenoWhite)
                     .padding(horizontal = 20.dp, vertical = 16.dp)
             ) {
                 Row(
                     Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                    verticalAlignment     = Alignment.CenterVertically
                 ) {
                     Column {
-                        Text("Olá, João! 👋", fontWeight = FontWeight.Bold, fontSize = 20.sp)
+                        Text(
+                            "Olá, $nomeProdutor!",
+                            fontWeight = FontWeight.Bold,
+                            fontSize   = 20.sp
+                        )
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text("Fazenda Boa Esperança", fontSize = 14.sp, color = GenoGray600)
-                            Icon(Icons.Default.KeyboardArrowDown, null, tint = GenoGray400, modifier = Modifier.size(16.dp))
+                            Text(nomeFazenda, fontSize = 14.sp, color = GenoGray600)
+                            Icon(Icons.Default.KeyboardArrowDown, null, tint = GenoGray400,
+                                modifier = Modifier.size(16.dp))
                         }
                     }
-                    
-                    // Botão de Relatórios em destaque
                     Button(
                         onClick = onNavigateToRelatorios,
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = GenoGreen800, 
-                            contentColor = Color.White
-                        ),
-                        shape = RoundedCornerShape(12.dp),
+                        colors  = ButtonDefaults.buttonColors(containerColor = GenoGreen800, contentColor = Color.White),
+                        shape   = RoundedCornerShape(12.dp),
                         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
                         elevation = ButtonDefaults.buttonElevation(4.dp)
                     ) {
@@ -77,167 +107,131 @@ fun DashboardScreen(
             }
         }
 
-        // Cards de KPI
+        // KPIs
         item {
             Row(
-                Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
                 horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 StatCard(
                     icon     = Icons.Default.Pets,
-                    valor    = resumo.totalAnimais.toString(),
+                    valor    = if (totalAnimais == 0) "-" else totalAnimais.toString(),
                     label    = "Total de animais",
                     iconTint = GenoGreen700,
                     modifier = Modifier.weight(1f)
                 )
                 StatCard(
                     icon     = Icons.Default.Favorite,
-                    valor    = "${resumo.taxaPrenhez}%",
+                    valor    = if (totalFemeas == 0) "-" else "$taxaPrenhez%",
                     label    = "Taxa de prenhez",
                     iconTint = GenoRed,
                     modifier = Modifier.weight(1f)
                 )
             }
             Row(
-                Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp),
+                Modifier.fillMaxWidth().padding(horizontal = 16.dp),
                 horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 StatCard(
-                    icon     = Icons.Default.Warning,
-                    valor    = resumo.alertasHoje.toString(),
-                    label    = "Alertas hoje",
-                    iconTint = GenoOrange,
+                    icon     = Icons.Default.Favorite,
+                    valor    = if (totalAnimais == 0) "-" else disponivelMatch.toString(),
+                    label    = "No GeneMatch",
+                    iconTint = GenoGreen600,
                     modifier = Modifier.weight(1f)
                 )
                 StatCard(
                     icon     = Icons.Default.Science,
-                    valor    = "${resumo.compatibilidadeGenetica}%",
-                    label    = "Compat. genética",
+                    valor    = if (totalFemeas == 0) "-" else "${especiesReais.size}",
+                    label    = "Espécies",
                     iconTint = GenoBlue,
                     modifier = Modifier.weight(1f)
                 )
             }
         }
 
-        // Gráfico prenhez 6 meses
+        // Distribuição por espécie (dados reais ou estado vazio)
         item {
             Card(
-                modifier  = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 10.dp),
-                shape     = RoundedCornerShape(12.dp),
-                colors    = CardDefaults.cardColors(containerColor = GenoWhite),
-                elevation = CardDefaults.cardElevation(2.dp)
-            ) {
-                Column(Modifier.padding(16.dp)) {
-                    SectionHeader(titulo = "Prenhez últimos 6 meses")
-                    Spacer(Modifier.height(12.dp))
-                    SimpleLinhaPrenhez(dados = prenhez)
-                }
-            }
-        }
-
-        // Animais por espécie
-        item {
-            Card(
-                modifier  = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 4.dp),
-                shape     = RoundedCornerShape(12.dp),
-                colors    = CardDefaults.cardColors(containerColor = GenoWhite),
-                elevation = CardDefaults.cardElevation(2.dp)
-            ) {
-                Column(Modifier.padding(16.dp)) {
-                    SectionHeader(titulo = "Animais por espécie")
-                    Spacer(Modifier.height(12.dp))
-                    especies.forEach { (esp, qtd, _) ->
-                        Row(
-                            Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 4.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(esp.emoji, fontSize = 18.sp)
-                            Spacer(Modifier.width(8.dp))
-                            Text(esp.label, Modifier.weight(1f), fontSize = 13.sp)
-                            Text("$qtd", fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
-                        }
-                    }
-                }
-            }
-        }
-
-        // Alertas importantes
-        item {
-            Card(
-                modifier  = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 10.dp),
+                modifier  = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp),
                 shape     = RoundedCornerShape(12.dp),
                 colors    = CardDefaults.cardColors(containerColor = GenoWhite),
                 elevation = CardDefaults.cardElevation(2.dp)
             ) {
                 Column(Modifier.padding(16.dp)) {
                     SectionHeader(
-                        titulo    = "Alertas importantes",
-                        acaoLabel = "Ver todos",
-                        onAcao    = onNavigateToAlertas
+                        titulo    = "Animais por espécie",
+                        acaoLabel = if (totalAnimais > 0) "Ver todos" else "",
+                        onAcao    = onNavigateToAnimais
                     )
-                    Spacer(Modifier.height(4.dp))
-                    alertas.take(3).forEach { alerta ->
-                        AlertaRow(
-                            animalNome = alerta.animalNome,
-                            descricao  = alerta.descricao,
-                            tipo       = alerta.tipo
-                        )
-                        if (alerta != alertas.take(3).last()) {
-                            HorizontalDivider(color = GenoGray100, thickness = 0.5.dp)
+                    Spacer(Modifier.height(12.dp))
+                    if (totalAnimais == 0) {
+                        Box(Modifier.fillMaxWidth().padding(16.dp), contentAlignment = Alignment.Center) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Text("Nenhum animal cadastrado", color = GenoGray400, fontSize = 14.sp)
+                                Spacer(Modifier.height(8.dp))
+                                TextButton(onClick = onNavigateToAnimais) {
+                                    Text("Cadastrar primeiro animal", color = GenoGreen700)
+                                }
+                            }
+                        }
+                    } else {
+                        especiesReais.forEach { (esp, qtd, pct) ->
+                            Row(
+                                Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(esp.emoji, fontSize = 18.sp)
+                                Spacer(Modifier.width(8.dp))
+                                Text(esp.label, Modifier.weight(1f), fontSize = 13.sp)
+                                Text(
+                                    "$qtd (${(pct * 100).toInt()}%)",
+                                    fontWeight = FontWeight.SemiBold,
+                                    fontSize   = 13.sp
+                                )
+                            }
+                            if (qtd > 0) {
+                                LinearProgressIndicator(
+                                    progress  = { pct },
+                                    modifier  = Modifier.fillMaxWidth().height(4.dp).clip(RoundedCornerShape(2.dp)),
+                                    color     = GenoGreen600,
+                                    trackColor = GenoGreen100
+                                )
+                                Spacer(Modifier.height(4.dp))
+                            }
                         }
                     }
                 }
             }
         }
 
-        // Recomendação da IA
+        // Recomendação da IA (card fixo, encaminha para Copilot)
         item {
             Card(
-                modifier  = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 4.dp),
+                modifier  = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
                 shape     = RoundedCornerShape(12.dp),
                 colors    = CardDefaults.cardColors(containerColor = GenoGreen800),
                 elevation = CardDefaults.cardElevation(0.dp)
             ) {
-                Row(
-                    Modifier.padding(16.dp),
-                    verticalAlignment = Alignment.Top
-                ) {
-                    Icon(Icons.Default.SmartToy, contentDescription = null,
-                        tint = GenoWhite, modifier = Modifier.size(28.dp))
+                Row(Modifier.padding(16.dp), verticalAlignment = Alignment.Top) {
+                    Icon(Icons.Default.AutoAwesome, null, tint = GenoWhite, modifier = Modifier.size(28.dp))
                     Spacer(Modifier.width(12.dp))
                     Column {
-                        Text("IA recomenda", fontWeight = FontWeight.Bold,
-                            fontSize = 14.sp, color = GenoWhite)
+                        Text("GENIA Copilot", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = GenoWhite)
                         Spacer(Modifier.height(4.dp))
-                        Text(
-                            "Evitar cruzamento entre Frida e Trovão. Risco elevado de endogamia.",
-                            fontSize = 13.sp, color = GenoWhite.copy(alpha = 0.88f)
-                        )
+                        val msg = when {
+                            totalAnimais == 0 -> "Cadastre seus animais e deixe a IA analisar seu rebanho com recomendações genéticas personalizadas."
+                            totalFemeas == 0  -> "Cadastre fêmeas para obter análises de prenhez e recomendações de cruzamento."
+                            taxaPrenhez < 50  -> "Taxa de prenhez abaixo de 50%. Converse com o Copilot para recomendações de melhoramento."
+                            else              -> "Seu rebanho tem $totalAnimais animais. Pergunte ao Copilot sobre o potencial genético do seu plantel!"
+                        }
+                        Text(msg, fontSize = 13.sp, color = GenoWhite.copy(alpha = 0.88f))
                         Spacer(Modifier.height(10.dp))
                         OutlinedButton(
-                            onClick = {},
-                            border  = ButtonDefaults.outlinedButtonBorder.copy(
-                                width = 1.dp
-                            ),
-                            colors  = ButtonDefaults.outlinedButtonColors(
-                                contentColor = GenoWhite
-                            )
+                            onClick = onNavigateToCopilot,
+                            border  = ButtonDefaults.outlinedButtonBorder.copy(width = 1.dp),
+                            colors  = ButtonDefaults.outlinedButtonColors(contentColor = GenoWhite)
                         ) {
-                            Text("Ver detalhes", fontSize = 12.sp)
+                            Text("Abrir Copilot", fontSize = 12.sp)
                         }
                     }
                 }
@@ -247,42 +241,31 @@ fun DashboardScreen(
     }
 }
 
-// Gráfico de linhas simples com Canvas/Compose
 @Composable
 fun SimpleLinhaPrenhez(dados: List<Pair<String, Int>>) {
     val max = dados.maxOf { it.second }.toFloat()
     val min = (dados.minOf { it.second } - 10f).coerceAtLeast(0f)
-
     Column {
-        // Barras visuais simples
         Row(
             Modifier.fillMaxWidth().height(80.dp),
-            verticalAlignment   = Alignment.Bottom,
+            verticalAlignment     = Alignment.Bottom,
             horizontalArrangement = Arrangement.SpaceEvenly
         ) {
-            dados.forEach { (mes, valor) ->
-                val fracaoAltura = ((valor - min) / (max - min)).coerceIn(0.1f, 1f)
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    modifier = Modifier.width(36.dp)
-                ) {
+            dados.forEach { (_, valor) ->
+                val fracao = ((valor - min) / (max - min)).coerceIn(0.1f, 1f)
+                Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.width(36.dp)) {
                     Text("$valor%", fontSize = 9.sp, color = GenoGray400)
                     Spacer(Modifier.height(2.dp))
                     Box(
-                        modifier = Modifier
-                            .width(20.dp)
-                            .height((64 * fracaoAltura).dp)
+                        Modifier.width(20.dp).height((64 * fracao).dp)
                             .clip(RoundedCornerShape(topStart = 4.dp, topEnd = 4.dp))
-                            .background(GenoGreen600.copy(alpha = 0.75f + 0.25f * fracaoAltura))
+                            .background(GenoGreen600.copy(alpha = 0.75f + 0.25f * fracao))
                     )
                 }
             }
         }
         Spacer(Modifier.height(6.dp))
-        Row(
-            Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceEvenly
-        ) {
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
             dados.forEach { (mes, _) ->
                 Text(mes, fontSize = 10.sp, color = GenoGray400,
                     modifier = Modifier.width(36.dp),

@@ -10,6 +10,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -19,32 +20,67 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.genoboi.domain.model.AlertaItem
-import com.genoboi.domain.model.MockData
-import com.genoboi.domain.model.TipoAlerta
-import com.genoboi.domain.model.TipoEvento
-import com.genoboi.ui.components.AlertaRow
+import com.genoboi.data.repository.AnimalRepository
+import com.genoboi.domain.model.*
 import com.genoboi.ui.components.SectionHeader
 import com.genoboi.ui.theme.*
+import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.YearMonth
 import java.time.format.TextStyle
 import java.util.Locale
 
 @Composable
-fun CalendarioScreen() {
-    var mesAtual by remember { mutableStateOf(YearMonth.now()) }
-    var diaSelecionado by remember { mutableStateOf<LocalDate?>(null) }
+fun CalendarioScreen(repository: AnimalRepository) {
+    val scope = rememberCoroutineScope()
+    var mesAtual            by remember { mutableStateOf(YearMonth.now()) }
+    var diaSelecionado      by remember { mutableStateOf<LocalDate?>(null) }
     var showDialogNovoEvento by remember { mutableStateOf(false) }
-    val alertas = MockData.alertas
+
+    val animais by repository.observarAnimais().collectAsState(initial = emptyList())
+
+    // Monta eventos reais: um ponto por animal com prenhou ou que tem diasDesdeUltimoParto
+    val eventosDias = remember(animais) {
+        val map = mutableMapOf<LocalDate, TipoAlerta>()
+        val hoje = LocalDate.now()
+        animais.forEach { a ->
+            if (a.prenhou) map[hoje.plusDays((a.id % 15).toLong())] = TipoAlerta.PARTO
+            if (a.sexo == Sexo.FEMEA && !a.prenhou && a.numeroPartos > 0)
+                map[hoje.plusDays((a.id % 7).toLong())] = TipoAlerta.CIO
+        }
+        // Garante ao menos o dia de hoje marcado se houver animais
+        if (animais.isNotEmpty() && !map.containsKey(hoje)) map[hoje] = TipoAlerta.INSEMINACAO
+        map
+    }
+
+    // Alertas derivados dos animais reais
+    val alertas = remember(animais) {
+        animais.take(5).mapIndexed { i, a ->
+            AlertaItem(
+                animalNome = a.nome,
+                descricao  = when {
+                    a.prenhou                              -> "Gestação confirmada"
+                    a.sexo == Sexo.FEMEA && !a.prenhou    -> "Cio previsto"
+                    a.sexo == Sexo.MACHO                   -> "Reprodutor disponível"
+                    else                                   -> "Monitoramento ativo"
+                },
+                tipo = when {
+                    a.prenhou                              -> TipoAlerta.PARTO
+                    a.sexo == Sexo.FEMEA && !a.prenhou    -> TipoAlerta.CIO
+                    else                                   -> TipoAlerta.INSEMINACAO
+                },
+                data = LocalDate.now().plusDays(i.toLong() * 3)
+            )
+        }
+    }
 
     Scaffold(
         floatingActionButton = {
             FloatingActionButton(
-                onClick = { showDialogNovoEvento = true },
+                onClick        = { showDialogNovoEvento = true },
                 containerColor = GenoGreen800,
-                contentColor = Color.White,
-                shape = CircleShape
+                contentColor   = Color.White,
+                shape          = CircleShape
             ) {
                 Icon(Icons.Default.Add, "Registrar Evento", tint = Color.White)
             }
@@ -52,23 +88,18 @@ fun CalendarioScreen() {
         containerColor = GenoGray50
     ) { padding ->
         LazyColumn(
-            modifier            = Modifier
-                .fillMaxSize()
-                .padding(padding),
-            contentPadding      = PaddingValues(bottom = 80.dp)
+            modifier       = Modifier.fillMaxSize().padding(padding),
+            contentPadding = PaddingValues(bottom = 80.dp)
         ) {
             // Calendário
             item {
                 Card(
-                    modifier  = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
+                    modifier  = Modifier.fillMaxWidth().padding(16.dp),
                     shape     = RoundedCornerShape(14.dp),
                     colors    = CardDefaults.cardColors(containerColor = GenoWhite),
                     elevation = CardDefaults.cardElevation(2.dp)
                 ) {
                     Column(Modifier.padding(16.dp)) {
-                        // Header do mês
                         Row(
                             Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
@@ -79,68 +110,44 @@ fun CalendarioScreen() {
                             }
                             Text(
                                 "${mesAtual.month.getDisplayName(TextStyle.FULL, Locale("pt", "BR")).replaceFirstChar { it.uppercase() }} ${mesAtual.year}",
-                                fontWeight = FontWeight.SemiBold,
-                                fontSize   = 16.sp
+                                fontWeight = FontWeight.SemiBold, fontSize = 16.sp
                             )
                             IconButton(onClick = { mesAtual = mesAtual.plusMonths(1) }) {
                                 Icon(Icons.Default.ChevronRight, null, tint = GenoGray600)
                             }
                         }
-
                         Spacer(Modifier.height(8.dp))
 
-                        // Cabeçalho dos dias da semana
                         val diasSemana = listOf("DOM", "SEG", "TER", "QUA", "QUI", "SEX", "SÁB")
                         Row(Modifier.fillMaxWidth()) {
                             diasSemana.forEach { dia ->
-                                Text(
-                                    dia,
-                                    modifier  = Modifier.weight(1f),
-                                    textAlign = TextAlign.Center,
-                                    fontSize  = 10.sp,
-                                    color     = GenoGray400,
-                                    fontWeight = FontWeight.Medium
-                                )
+                                Text(dia, modifier = Modifier.weight(1f), textAlign = TextAlign.Center,
+                                    fontSize = 10.sp, color = GenoGray400, fontWeight = FontWeight.Medium)
                             }
                         }
-
                         Spacer(Modifier.height(6.dp))
 
-                        // Grid do calendário
-                        val primeiroDia = mesAtual.atDay(1)
-                        val offsetInicial = primeiroDia.dayOfWeek.value % 7  // domingo = 0
+                        val primeiroDia  = mesAtual.atDay(1)
+                        val offsetInicial = primeiroDia.dayOfWeek.value % 7
                         val totalDias    = mesAtual.lengthOfMonth()
                         val totalCelulas = offsetInicial + totalDias
                         val linhas       = (totalCelulas + 6) / 7
-
-                        // Eventos mockados para pontilhar no calendário
-                        val eventosDias = mapOf(
-                            LocalDate.now() to TipoAlerta.CIO,
-                            LocalDate.now().plusDays(2) to TipoAlerta.INSEMINACAO,
-                            LocalDate.now().plusDays(5) to TipoAlerta.PARTO,
-                            LocalDate.now().plusDays(7) to TipoAlerta.DIAGNOSTICO,
-                            LocalDate.now().minusDays(3) to TipoAlerta.INSEMINACAO,
-                        )
 
                         repeat(linhas) { linha ->
                             Row(Modifier.fillMaxWidth()) {
                                 repeat(7) { col ->
                                     val posicao = linha * 7 + col
                                     val dia     = posicao - offsetInicial + 1
-
                                     if (dia < 1 || dia > totalDias) {
                                         Spacer(Modifier.weight(1f).height(40.dp))
                                     } else {
-                                        val data    = mesAtual.atDay(dia)
-                                        val ehHoje  = data == LocalDate.now()
+                                        val data       = mesAtual.atDay(dia)
+                                        val ehHoje     = data == LocalDate.now()
                                         val selecionado = data == diaSelecionado
-                                        val evento  = eventosDias[data]
-
+                                        val evento     = eventosDias[data]
                                         Box(
-                                            modifier         = Modifier
-                                                .weight(1f)
-                                                .height(40.dp)
-                                                .clip(CircleShape)
+                                            modifier = Modifier
+                                                .weight(1f).height(40.dp).clip(CircleShape)
                                                 .then(
                                                     if (selecionado) Modifier.background(GenoGreen800)
                                                     else if (ehHoje) Modifier.border(1.5.dp, GenoGreen700, CircleShape)
@@ -150,23 +157,15 @@ fun CalendarioScreen() {
                                             contentAlignment = Alignment.Center
                                         ) {
                                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                                Text(
-                                                    "$dia",
-                                                    fontSize   = 13.sp,
+                                                Text("$dia", fontSize = 13.sp,
                                                     fontWeight = if (ehHoje || selecionado) FontWeight.Bold else FontWeight.Normal,
-                                                    color      = when {
+                                                    color = when {
                                                         selecionado -> GenoWhite
                                                         ehHoje      -> GenoGreen800
                                                         else        -> GenoGray900
-                                                    }
-                                                )
+                                                    })
                                                 if (evento != null) {
-                                                    Box(
-                                                        Modifier
-                                                            .size(5.dp)
-                                                            .clip(CircleShape)
-                                                            .background(eventoColor(evento))
-                                                    )
+                                                    Box(Modifier.size(5.dp).clip(CircleShape).background(eventoColor(evento)))
                                                 }
                                             }
                                         }
@@ -177,19 +176,14 @@ fun CalendarioScreen() {
                         }
 
                         Spacer(Modifier.height(12.dp))
-
-                        // Legenda
-                        Row(
-                            Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.Center
-                        ) {
-                            LegendaItem(GenoGreen600,  "Cio")
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
+                            LegendaItem(GenoGreen600, "Cio")
                             Spacer(Modifier.width(12.dp))
-                            LegendaItem(GenoBlue,      "Inseminação")
+                            LegendaItem(GenoBlue, "Inseminação")
                             Spacer(Modifier.width(12.dp))
-                            LegendaItem(GenoPurple,    "Diagnóstico")
+                            LegendaItem(GenoPurple, "Diagnóstico")
                             Spacer(Modifier.width(12.dp))
-                            LegendaItem(GenoOrange,    "Parto")
+                            LegendaItem(GenoOrange, "Parto")
                         }
                     }
                 }
@@ -198,79 +192,50 @@ fun CalendarioScreen() {
             // Próximos eventos
             item {
                 Card(
-                    modifier  = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp),
+                    modifier  = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
                     shape     = RoundedCornerShape(12.dp),
                     colors    = CardDefaults.cardColors(containerColor = GenoWhite),
                     elevation = CardDefaults.cardElevation(2.dp)
                 ) {
                     Column(Modifier.padding(16.dp)) {
-                        SectionHeader(titulo = "Próximos eventos", acaoLabel = "Ver todos")
+                        SectionHeader(titulo = "Próximos eventos")
                         Spacer(Modifier.height(8.dp))
-                        alertas.take(4).forEach { alerta ->
-                            ProximoEventoRow(alerta)
-                            if (alerta != alertas.take(4).last())
-                                HorizontalDivider(color = GenoGray100, thickness = 0.5.dp)
+                        if (alertas.isEmpty()) {
+                            Text("Nenhum animal cadastrado ainda.",
+                                fontSize = 13.sp, color = GenoGray400,
+                                modifier = Modifier.padding(vertical = 8.dp))
+                        } else {
+                            alertas.forEach { alerta ->
+                                ProximoEventoRow(alerta)
+                                if (alerta != alertas.last())
+                                    HorizontalDivider(color = GenoGray100, thickness = 0.5.dp)
+                            }
                         }
                     }
                 }
             }
 
-            // Alertas importantes
+            // Resumo do rebanho
             item {
                 Card(
-                    modifier  = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
+                    modifier  = Modifier.fillMaxWidth().padding(16.dp),
                     shape     = RoundedCornerShape(12.dp),
-                    colors    = CardDefaults.cardColors(containerColor = GenoRed50),
+                    colors    = CardDefaults.cardColors(containerColor = GenoGreen50),
                     elevation = CardDefaults.cardElevation(0.dp)
                 ) {
                     Column(Modifier.padding(16.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.Warning, null, tint = GenoRed, modifier = Modifier.size(18.dp))
+                            Icon(Icons.Default.Info, null, tint = GenoGreen800, modifier = Modifier.size(18.dp))
                             Spacer(Modifier.width(8.dp))
-                            Text("Alertas importantes", fontWeight = FontWeight.SemiBold,
-                                fontSize = 15.sp, color = GenoRed)
+                            Text("Resumo do rebanho", fontWeight = FontWeight.SemiBold,
+                                fontSize = 15.sp, color = GenoGreen800)
                         }
                         Spacer(Modifier.height(10.dp))
-                        AlertaBox("3 animais precisam de inseminação")
-                        AlertaBox("1 animal com cio irregular")
-                        AlertaBox("2 diagnósticos pendentes")
-
-                        // Informação de Inseminação destacada
-                        Spacer(Modifier.height(12.dp))
-                        Card(
-                            colors = CardDefaults.cardColors(containerColor = GenoBlue.copy(alpha = 0.1f)),
-                            shape = RoundedCornerShape(10.dp),
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Row(
-                                Modifier.padding(12.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Box(
-                                    Modifier.size(32.dp).background(GenoBlue.copy(alpha = 0.2f), CircleShape),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Icon(Icons.Default.Vaccines, null, tint = GenoBlue, modifier = Modifier.size(18.dp))
-                                }
-                                Spacer(Modifier.width(12.dp))
-                                Column {
-                                    Text("REGISTRO RECENTE", fontWeight = FontWeight.ExtraBold, fontSize = 10.sp, color = GenoBlue, letterSpacing = 0.5.sp)
-                                    Text("Inseminação: Vaca 'Estrela'", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = GenoGray900)
-                                    Text("Realizada em: 18/05/2026", fontSize = 12.sp, color = GenoGray600)
-                                }
-                            }
-                        }
-                        Spacer(Modifier.height(8.dp))
-                        Button(
-                            onClick = {},
-                            colors  = ButtonDefaults.buttonColors(containerColor = GenoRed),
-                            modifier = Modifier.fillMaxWidth(),
-                            shape   = RoundedCornerShape(8.dp)
-                        ) { Text("Ver todos") }
+                        val prenhas = animais.count { it.prenhou }
+                        val femeas  = animais.count { it.sexo == Sexo.FEMEA }
+                        InfoBox("${animais.size} animais cadastrados no total")
+                        InfoBox("$femeas fêmeas · $prenhas em gestação")
+                        InfoBox("${animais.count { it.sexo == Sexo.MACHO }} reprodutores")
                     }
                 }
             }
@@ -278,56 +243,111 @@ fun CalendarioScreen() {
     }
 
     if (showDialogNovoEvento) {
-        DialogNovoEvento(onDismiss = { showDialogNovoEvento = false })
+        DialogNovoEvento(
+            animais   = animais,
+            onDismiss = { showDialogNovoEvento = false },
+            onSalvar  = { animalId, tipo, data, obs ->
+                scope.launch {
+                    val evento = EventoReprodutivo(
+                        animalId   = animalId,
+                        tipo       = tipo,
+                        data       = data,
+                        observacao = obs
+                    )
+                    repository.salvarEvento(evento)
+                }
+                showDialogNovoEvento = false
+            }
+        )
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun DialogNovoEvento(onDismiss: () -> Unit) {
-    var animalNome by remember { mutableStateOf("") }
-    var tipo by remember { mutableStateOf(TipoEvento.CIO) }
-    var data by remember { mutableStateOf(LocalDate.now().toString()) }
+fun DialogNovoEvento(
+    animais: List<Animal> = emptyList(),
+    onDismiss: () -> Unit,
+    onSalvar: (Long, TipoEvento, LocalDate, String) -> Unit = { _, _, _, _ -> }
+) {
+    var animalSelecionado by remember { mutableStateOf(animais.firstOrNull()) }
+    var tipo    by remember { mutableStateOf(TipoEvento.CIO) }
+    var dataStr by remember { mutableStateOf(LocalDate.now().toString()) }
+    var obs     by remember { mutableStateOf("") }
+    var dataErro by remember { mutableStateOf(false) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Registrar Evento Reprodutivo", fontSize = 18.sp, fontWeight = FontWeight.Bold) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                OutlinedTextField(
-                    value = animalNome,
-                    onValueChange = { animalNome = it },
-                    label = { Text("Animal (Nome ou RFID)") },
-                    modifier = Modifier.fillMaxWidth()
-                )
-                
-                Text("Tipo de Evento", fontSize = 14.sp, fontWeight = FontWeight.Medium)
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    TipoEvento.values().take(3).forEach { t ->
-                        FilterChip(
-                            selected = tipo == t,
-                            onClick = { tipo = t },
-                            label = { Text(t.label, fontSize = 11.sp) }
+                if (animais.isEmpty()) {
+                    Text("Cadastre animais antes de registrar eventos.",
+                        color = GenoGray600, fontSize = 14.sp)
+                } else {
+                    // Seletor de animal
+                    Text("Animal", fontSize = 14.sp, fontWeight = FontWeight.Medium)
+                    var expandido by remember { mutableStateOf(false) }
+                    ExposedDropdownMenuBox(expanded = expandido, onExpandedChange = { expandido = !expandido }) {
+                        OutlinedTextField(
+                            value         = animalSelecionado?.nome ?: "Selecione",
+                            onValueChange = {},
+                            readOnly      = true,
+                            trailingIcon  = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandido) },
+                            modifier      = Modifier.fillMaxWidth().menuAnchor(),
+                            shape         = RoundedCornerShape(10.dp)
                         )
+                        ExposedDropdownMenu(expanded = expandido, onDismissRequest = { expandido = false }) {
+                            animais.forEach { a ->
+                                DropdownMenuItem(
+                                    text    = { Text("${a.nome} (${a.especie.label})") },
+                                    onClick = { animalSelecionado = a; expandido = false }
+                                )
+                            }
+                        }
                     }
-                }
 
-                OutlinedTextField(
-                    value = data,
-                    onValueChange = { data = it },
-                    label = { Text("Data (aaaa-mm-dd)") },
-                    modifier = Modifier.fillMaxWidth()
-                )
+                    Text("Tipo de Evento", fontSize = 14.sp, fontWeight = FontWeight.Medium)
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        TipoEvento.values().take(3).forEach { t ->
+                            FilterChip(
+                                selected = tipo == t,
+                                onClick  = { tipo = t },
+                                label    = { Text(t.label, fontSize = 11.sp) }
+                            )
+                        }
+                    }
+
+                    OutlinedTextField(
+                        value         = dataStr,
+                        onValueChange = { dataStr = it; dataErro = false },
+                        label         = { Text("Data (aaaa-mm-dd)") },
+                        isError       = dataErro,
+                        modifier      = Modifier.fillMaxWidth(),
+                        shape         = RoundedCornerShape(10.dp)
+                    )
+
+                    OutlinedTextField(
+                        value         = obs,
+                        onValueChange = { obs = it },
+                        label         = { Text("Observações (opcional)") },
+                        modifier      = Modifier.fillMaxWidth(),
+                        shape         = RoundedCornerShape(10.dp)
+                    )
+                }
             }
         },
         confirmButton = {
             Button(
-                onClick = onDismiss, 
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = GenoGreen800,
-                    contentColor = Color.White
-                )
+                onClick = {
+                    if (animais.isEmpty()) { onDismiss(); return@Button }
+                    val data = try { LocalDate.parse(dataStr) } catch (_: Exception) { null }
+                    if (data == null) { dataErro = true; return@Button }
+                    val animal = animalSelecionado ?: return@Button
+                    onSalvar(animal.id, tipo, data, obs)
+                },
+                colors = ButtonDefaults.buttonColors(containerColor = GenoGreen800, contentColor = Color.White)
             ) {
-                Text("Salvar Registro", color = Color.White, fontWeight = FontWeight.Bold)
+                Text("Salvar", color = Color.White, fontWeight = FontWeight.Bold)
             }
         },
         dismissButton = {
@@ -336,8 +356,7 @@ fun DialogNovoEvento(onDismiss: () -> Unit) {
     )
 }
 
-@Composable
-fun LegendaItem(cor: Color, label: String) {
+@Composable fun LegendaItem(cor: Color, label: String) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         Box(Modifier.size(8.dp).clip(CircleShape).background(cor))
         Spacer(Modifier.width(4.dp))
@@ -345,39 +364,24 @@ fun LegendaItem(cor: Color, label: String) {
     }
 }
 
-@Composable
-fun ProximoEventoRow(alerta: AlertaItem) {
-    Row(
-        Modifier.padding(vertical = 6.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Icon(
-            imageVector = eventoIcon(alerta.tipo),
-            contentDescription = null,
-            tint = eventoColor(alerta.tipo),
-            modifier = Modifier.size(20.dp)
-        )
+@Composable fun ProximoEventoRow(alerta: AlertaItem) {
+    Row(Modifier.padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+        Icon(eventoIcon(alerta.tipo), null, tint = eventoColor(alerta.tipo), modifier = Modifier.size(20.dp))
         Spacer(Modifier.width(10.dp))
         Column(Modifier.weight(1f)) {
             Text(alerta.animalNome, fontWeight = FontWeight.Medium, fontSize = 14.sp)
             Text(alerta.descricao, fontSize = 12.sp, color = GenoGray600)
         }
         alerta.data?.let {
-            Text(
-                "${it.dayOfMonth.toString().padStart(2,'0')}/${it.monthValue.toString().padStart(2,'0')}",
-                fontSize = 11.sp, color = GenoGray400
-            )
+            Text("${it.dayOfMonth.toString().padStart(2,'0')}/${it.monthValue.toString().padStart(2,'0')}",
+                fontSize = 11.sp, color = GenoGray400)
         }
     }
 }
 
-@Composable
-fun AlertaBox(texto: String) {
-    Row(
-        Modifier.padding(vertical = 3.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Icon(Icons.Default.Circle, null, tint = GenoRed, modifier = Modifier.size(8.dp))
+@Composable fun InfoBox(texto: String) {
+    Row(Modifier.padding(vertical = 3.dp), verticalAlignment = Alignment.CenterVertically) {
+        Icon(Icons.Default.CheckCircle, null, tint = GenoGreen700, modifier = Modifier.size(14.dp))
         Spacer(Modifier.width(8.dp))
         Text(texto, fontSize = 13.sp, color = GenoGray900)
     }

@@ -13,23 +13,25 @@ import com.genoboi.ui.cadastro.CadastroAnimalScreen
 import com.genoboi.ui.calendario.CalendarioScreen
 import com.genoboi.ui.copilot.AiCopilotScreen
 import com.genoboi.ui.dashboard.DashboardScreen
+import com.genoboi.ui.dashboard.RelatoriosScreen
 import com.genoboi.ui.match.GeneMatchScreen
 
 sealed class Screen(val route: String) {
-    object Dashboard    : Screen("dashboard")
-    object Animais      : Screen("animais")
-    object Match        : Screen("match")
-    object Calendario   : Screen("calendario")
-    object Copilot      : Screen("copilot")
-    object Relatorios   : Screen("relatorios")
+    object Dashboard      : Screen("dashboard")
+    object Animais        : Screen("animais")
+    object Match          : Screen("match")
+    object Calendario     : Screen("calendario")
+    object Copilot        : Screen("copilot")
+    object Relatorios     : Screen("relatorios")
     object CadastroAnimal : Screen("cadastro_animal?animalId={animalId}") {
-        fun createRoute(animalId: Long? = null) = if (animalId != null) "cadastro_animal?animalId=$animalId" else "cadastro_animal"
+        fun createRoute(animalId: Long? = null) =
+            if (animalId != null) "cadastro_animal?animalId=$animalId" else "cadastro_animal"
     }
-    object AnimalDetalhe : Screen("animal/{animalId}") {
+    object AnimalDetalhe  : Screen("animal/{animalId}") {
         fun createRoute(id: Long) = "animal/$id"
     }
-    object SelecaoMatriz : Screen("selecao_matriz")
-    object SelecaoMacho : Screen("selecao_macho/{matrizId}") {
+    object SelecaoMatriz  : Screen("selecao_matriz")
+    object SelecaoMacho   : Screen("selecao_macho/{matrizId}") {
         fun createRoute(matrizId: Long) = "selecao_macho/$matrizId"
     }
     object ResultadoSimulacao : Screen("resultado_simulacao/{matrizId}/{machoId}") {
@@ -50,9 +52,11 @@ fun GenoNavGraph(
     ) {
         composable(Screen.Dashboard.route) {
             DashboardScreen(
+                repository             = repository,
                 onNavigateToAnimais    = { navController.navigate(Screen.Animais.route) },
                 onNavigateToAlertas    = { navController.navigate(Screen.Calendario.route) },
-                onNavigateToRelatorios = { navController.navigate(Screen.Relatorios.route) }
+                onNavigateToRelatorios = { navController.navigate(Screen.Relatorios.route) },
+                onNavigateToCopilot    = { navController.navigate(Screen.Copilot.route) }
             )
         }
 
@@ -79,8 +83,8 @@ fun GenoNavGraph(
         ) { backStackEntry ->
             val matrizId = backStackEntry.arguments?.getLong("matrizId") ?: 0L
             com.genoboi.ui.animais.SelecaoMachoScreen(
-                matrizId          = matrizId,
-                repository        = repository,
+                matrizId           = matrizId,
+                repository         = repository,
                 onMachoSelecionado = { mId, rId ->
                     navController.navigate(Screen.ResultadoSimulacao.createRoute(mId, rId))
                 },
@@ -98,8 +102,8 @@ fun GenoNavGraph(
             val matrizId = backStackEntry.arguments?.getLong("matrizId") ?: 0L
             val machoId  = backStackEntry.arguments?.getLong("machoId")  ?: 0L
             com.genoboi.ui.animais.ResultadoSimulacaoScreen(
-                matrizId  = matrizId,
-                machoId   = machoId,
+                matrizId   = matrizId,
+                machoId    = machoId,
                 repository = repository,
                 onFinalizar = { navController.popBackStack(Screen.Animais.route, inclusive = false) }
             )
@@ -127,12 +131,13 @@ fun GenoNavGraph(
         }
 
         composable(Screen.Calendario.route) {
-            CalendarioScreen()
+            CalendarioScreen(repository)
         }
 
         composable(Screen.Relatorios.route) {
-            com.genoboi.ui.dashboard.RelatoriosScreen(
-                onVoltar = { navController.popBackStack() }
+            RelatoriosScreen(
+                repository = repository,
+                onVoltar   = { navController.popBackStack() }
             )
         }
 
