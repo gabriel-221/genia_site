@@ -1,11 +1,9 @@
 'use client'
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Lock, Mail, LogIn } from '@/components/Icons'
 
 export default function LoginPage() {
-  const router = useRouter()
   const supabase = createClient()
   const [email, setEmail] = useState('')
   const [senha, setSenha] = useState('')
@@ -87,13 +85,6 @@ export default function LoginPage() {
             )}
           </button>
         </form>
-      </div>
-
-      {/* Demo hint */}
-      <div className="mt-6 w-full max-w-sm bg-white/10 rounded-2xl p-4 text-center">
-        <p className="text-white/80 text-xs font-semibold mb-1">Contas de demonstração</p>
-        <p className="text-white/60 text-xs">produtor1@teste.com • senha123</p>
-        <p className="text-white/60 text-xs">produtor4@teste.com • senha123</p>
       </div>
 
       {/* LGPD */}

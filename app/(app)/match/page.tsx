@@ -4,7 +4,7 @@ import { createClient } from '@/lib/supabase/client'
 import type { Animal, ScoredAnimal } from '@/types'
 import { ESPECIE_EMOJI, ESPECIE_LABEL } from '@/types'
 import { rankAnimals } from '@/lib/genetic-ranking'
-import { Dna, ArrowLeft, CheckCircle2, X, Heart, Users } from '@/components/Icons'
+import { Dna, ArrowLeft, CheckCircle2, X, Users } from '@/components/Icons'
 
 interface AnimalComProdutor extends Animal {
   genia_produtor?: {
@@ -12,7 +12,6 @@ interface AnimalComProdutor extends Animal {
     nome_fazenda?: string
     municipio: string
     estado: string
-    telefone?: string
   } | null
 }
 
@@ -44,12 +43,10 @@ function formatarWhatsApp(telefone?: string) {
 
 export default function MatchPage() {
   const supabase = createClient()
-  const [meusProdutorId, setMeusProdutorId] = useState<string | null>(null)
   const [animais, setAnimais] = useState<Animal[]>([])
   const [outrosAnimais, setOutrosAnimais] = useState<AnimalComProdutor[]>([])
   const [objetivo, setObjetivo] = useState('')
   const [ranking, setRanking] = useState<ScoredAnimal[]>([])
-  const [loading, setLoading] = useState(false)
   const [step, setStep] = useState<'select' | 'result'>('select')
   const [modalAnimal, setModalAnimal] = useState<AnimalComProdutor | null>(null)
 
@@ -62,17 +59,15 @@ export default function MatchPage() {
         .from('genia_produtor').select('id').eq('user_id', user.id).single()
       if (!prod) return
 
-      setMeusProdutorId(prod.id)
-
       // Meus animais para o ranking
       const { data: meusAnim } = await supabase
         .from('genia_animal').select('*').eq('produtor_id', prod.id)
       setAnimais(meusAnim ?? [])
 
-      // Animais de OUTROS produtores disponíveis para match (com dados do produtor)
+      // Animais de OUTROS produtores disponíveis para match (telefone carregado só ao contatar)
       const { data: outros } = await supabase
         .from('genia_animal')
-        .select('*, genia_produtor(nome, nome_fazenda, municipio, estado, telefone)')
+        .select('*, genia_produtor(nome, nome_fazenda, municipio, estado)')
         .eq('disponivel_match', true)
         .neq('produtor_id', prod.id)
         .limit(30)
@@ -83,20 +78,24 @@ export default function MatchPage() {
 
   function buscar() {
     if (!objetivo) return
-    setLoading(true)
     setRanking(rankAnimals(objetivo, animais))
-    setLoading(false)
     setStep('result')
   }
 
-  function abrirWhatsApp(animal: AnimalComProdutor) {
-    const phone = formatarWhatsApp(animal.genia_produtor?.telefone)
+  async function abrirWhatsApp(animal: AnimalComProdutor) {
+    // Fetch phone only on demand — not bulk-loaded with all animals
+    const { data: prod } = await supabase
+      .from('genia_produtor')
+      .select('telefone')
+      .eq('id', animal.produtor_id)
+      .single()
+
+    const phone = formatarWhatsApp(prod?.telefone)
     if (!phone) {
       alert('Número de WhatsApp não disponível para este produtor.')
       return
     }
     const nome = animal.genia_produtor?.nome ?? 'Produtor'
-    const fazenda = animal.genia_produtor?.nome_fazenda ?? animal.genia_produtor?.municipio ?? ''
     const msg = `Olá, ${nome}! Vi o animal *${animal.nome}* (${animal.raca} - ${ESPECIE_LABEL[animal.especie]}) disponível para GeneMatch no *GENIA* e tenho interesse em discutir uma parceria de melhoramento genético. Podemos conversar? 🐄🌿`
     window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`, '_blank')
   }

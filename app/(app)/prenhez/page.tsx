@@ -74,8 +74,8 @@ export default function PrenhezPage() {
       const data = await res.json()
       if (data.error) throw new Error(data.error)
       setResultado(data)
-    } catch (e: any) {
-      setErro(e.message ?? 'Erro ao calcular.')
+    } catch (e) {
+      setErro(e instanceof Error ? e.message : 'Erro ao calcular.')
     }
     setCalculando(false)
   }

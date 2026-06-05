@@ -105,7 +105,7 @@ export default function CalendarioPage() {
     if (mes === 11) { setMes(0); setAno(a => a + 1) } else setMes(m => m + 1)
   }
 
-  const alertas = animais.slice(0, 5).map((a, i) => ({
+  const alertas = animais.slice(0, 5).map((a) => ({
     nome: a.nome,
     desc: a.prenhou ? 'Gestação confirmada' : a.sexo === 'femea' ? 'Cio previsto' : 'Disponível para reprodução',
     tipo: (a.prenhou ? 'parto' : a.sexo === 'femea' ? 'cio' : 'inseminacao') as TipoEvento,

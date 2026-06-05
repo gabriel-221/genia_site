@@ -1,6 +1,5 @@
 'use client'
 import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import type { Produtor } from '@/types'
@@ -10,7 +9,7 @@ import {
 } from '@/components/Icons'
 
 function MenuLink({ href, icon: Icon, label, desc, cor = 'text-green-800' }: {
-  href: string; icon: React.FC<any>; label: string; desc: string; cor?: string
+  href: string; icon: React.FC<{ className?: string }>; label: string; desc: string; cor?: string
 }) {
   return (
     <Link href={href} className="flex items-center gap-4 bg-white rounded-2xl p-4 border border-gray-100 shadow-sm active:bg-gray-50">
@@ -27,7 +26,6 @@ function MenuLink({ href, icon: Icon, label, desc, cor = 'text-green-800' }: {
 }
 
 export default function MaisPage() {
-  const router = useRouter()
   const supabase = createClient()
   const [produtor, setProdutor] = useState<Produtor | null>(null)
   const [editando, setEditando] = useState(false)

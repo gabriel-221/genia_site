@@ -32,7 +32,7 @@ export default function VLibras() {
     script.src = 'https://vlibras.gov.br/app/vlibras-plugin.js'
     script.async = true
     script.onload = () => {
-      const win = window as any
+      const win = window as Window & { VLibras?: { Widget: new (url: string) => { init?: () => void } } }
       if (!win.VLibras) return
 
       // Instancia o widget

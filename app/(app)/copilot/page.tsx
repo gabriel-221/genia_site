@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import type { Animal } from '@/types'
 import { ESPECIE_LABEL } from '@/types'
-import { Sparkles, Send, ArrowLeft } from '@/components/Icons'
+import { Sparkles, Send } from '@/components/Icons'
 
 interface Msg { role: 'user' | 'assistant'; content: string }
 
@@ -81,9 +81,19 @@ export default function CopilotPage() {
     setLoading(true)
 
     try {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) {
+        setMsgs(prev => [...prev, { role: 'assistant', content: 'Sessão expirada. Faça login novamente.' }])
+        setLoading(false)
+        return
+      }
+
       const res = await fetch('/api/copilot', {
         method: 'POST',
-        headers: { 'content-type': 'application/json' },
+        headers: {
+          'content-type': 'application/json',
+          'authorization': `Bearer ${session.access_token}`,
+        },
         body: JSON.stringify({
           mensagem: texto,
           historico: historicoAtual.slice(-10).map(m => ({ role: m.role, content: m.content })),
