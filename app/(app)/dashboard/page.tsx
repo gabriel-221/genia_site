@@ -36,7 +36,6 @@ export default function DashboardPage() {
 
   async function handleLogout() {
     await supabase.auth.signOut()
-    document.cookie = 'genia-session=; path=/; max-age=0; SameSite=Lax'
     router.push('/login')
     router.refresh()
   }
