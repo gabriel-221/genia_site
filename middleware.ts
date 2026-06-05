@@ -1,12 +1,14 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
-const PROJECT_REF = (process.env.NEXT_PUBLIC_SUPABASE_URL ?? '')
-  .split('//')[1]?.split('.')[0] ?? ''
-const AUTH_COOKIE = `sb-${PROJECT_REF}-auth-token`
+// Cookie leve definido pelo login/logout da aplicação.
+// O JWT de sessão real fica em localStorage (gerenciado pelo Supabase JS),
+// mas o middleware não tem acesso ao localStorage — por isso usamos
+// um cookie de presença separado para proteger as rotas no servidor.
+const SESSION_COOKIE = 'genia-session'
 
 export function middleware(request: NextRequest) {
-  const cookie = request.cookies.get(AUTH_COOKIE)
+  const cookie = request.cookies.get(SESSION_COOKIE)
   if (!cookie?.value) {
     return NextResponse.redirect(new URL('/login', request.url))
   }

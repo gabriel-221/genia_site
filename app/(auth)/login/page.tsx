@@ -23,7 +23,9 @@ export default function LoginPage() {
         'Erro ao entrar. Tente novamente.'
       )
     } else {
-      // Força navegação completa para garantir que o estado de auth seja lido
+      // Cookie leve para o middleware verificar autenticação server-side
+      const secure = location.protocol === 'https:' ? '; Secure' : ''
+      document.cookie = `genia-session=1; path=/; max-age=604800; SameSite=Lax${secure}`
       window.location.href = '/dashboard'
     }
   }

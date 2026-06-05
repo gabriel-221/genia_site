@@ -67,6 +67,7 @@ export default function MaisPage() {
 
   async function handleLogout() {
     await supabase.auth.signOut()
+    document.cookie = 'genia-session=; path=/; max-age=0; SameSite=Lax'
     window.location.href = '/login'
   }
 
