@@ -1,6 +1,6 @@
 'use client'
 import { useEffect, useState, useCallback } from 'react'
-import { createClient } from '@/lib/supabase/client'
+import { createClient, clearSessionAndRedirect } from '@/lib/supabase/client'
 import type { Animal } from '@/types'
 import { ESPECIE_EMOJI } from '@/types'
 import { ChevronLeft, ChevronRight, Plus, Heart, Syringe, Baby, Microscope, X } from '@/components/Icons'
@@ -144,8 +144,13 @@ export default function CalendarioPage() {
 
     setSaving(true); setErro('')
 
-    // Verifica sessão antes do insert
-    const { data: { session } } = await supabase.auth.getSession()
+    // Verifica sessão — captura refresh token inválido e redireciona
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+    if (sessionError?.message?.toLowerCase().includes('refresh token') ||
+        sessionError?.message?.toLowerCase().includes('invalid')) {
+      await clearSessionAndRedirect()
+      return
+    }
     if (!session) {
       setSaving(false)
       setErro('Sessão expirada. Faça logout e login novamente.')
