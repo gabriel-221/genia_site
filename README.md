@@ -1,25 +1,200 @@
-# Projeto de Dados e IA
+# G.E.N.I.A — Pipeline de Dados e Inteligência Artificial
 
-Este workspace foi preparado para analise de dados e treino de modelo na branch `data-and-ai`.
+> **Branch `data-and-ai`** — Hackathon Expoagro Crateús 2026
 
-O guia conceitual deste repositorio e o arquivo `Relatorio Dataset Prenhez Random Forest.pdf`, que define as variaveis do dataset sintetico, a formula de geracao da probabilidade de prenhez e a justificativa para uso de Random Forest como baseline.
+[![Licença: GPL v3](https://img.shields.io/badge/Licen%C3%A7a-GPL%20v3-blue.svg)](../../blob/master/LICENSE)
+[![Python](https://img.shields.io/badge/Python-3.11+-blue?logo=python)](https://python.org)
+[![scikit-learn](https://img.shields.io/badge/scikit--learn-1.5-orange?logo=scikit-learn)](https://scikit-learn.org)
+[![ONNX](https://img.shields.io/badge/ONNX-Runtime-gray?logo=onnx)](https://onnxruntime.ai)
 
-## Estrutura
+Esta branch contém o **pipeline completo de dados e IA** do GENIA: geração de dataset sintético zootécnico, análise exploratória, treinamento do modelo Random Forest, exportação para ONNX e relatórios de métricas.
 
-- `data/raw/`: datasets brutos
-- `data/processed/`: arquivos tratados e features intermediarias
-- `notebooks/`: exploracao livre
-- `reports/`: relatorios, figuras e metricas exportadas
-- `src/`: scripts de analise, geracao e treinamento
+O modelo `.onnx` produzido aqui é consumido diretamente pelo **App Android** (ONNX Runtime embarcado) e sua lógica é reimplementada em TypeScript para a **Web PWA** (`/api/prenhez`).
 
-## Fluxo sugerido
+---
 
-1. Gerar ou colocar o dataset CSV em `data/raw/`.
-2. Rodar a analise exploratoria.
-3. Treinar e salvar o modelo.
-4. Usar o `.onnx` para inferencia.
+## Navegação entre branches
 
-## Ambiente
+| Branch | Componente | Descrição |
+|--------|-----------|-----------|
+| [`master`](../../tree/master) | **Web PWA** (Next.js) | Interface web, GENIA Copilot, GeneMatch |
+| [`genia-apk`](../../tree/genia-apk) | **App Android** (Kotlin) | Aplicativo nativo com NFC e inferência embarcada |
+| [`data-and-ai`](../../tree/data-and-ai) | **IA & Dados** (Python) | **← você está aqui** |
+
+---
+
+## Sumário
+
+- [Tecnologias e Frameworks](#tecnologias-e-frameworks)
+- [Inteligência Artificial — Implementação](#inteligência-artificial--implementação)
+- [Conformidade com a LGPD](#conformidade-com-a-lgpd)
+- [Estrutura de Diretórios](#estrutura-de-diretórios)
+- [Configuração do Ambiente](#configuração-do-ambiente)
+- [Execução do Pipeline](#execução-do-pipeline)
+- [Dataset Sintético](#dataset-sintético)
+- [Modelo Random Forest](#modelo-random-forest)
+- [Inferência com ONNX](#inferência-com-onnx)
+- [Frontend de Demonstração](#frontend-de-demonstração)
+
+---
+
+## Tecnologias e Frameworks
+
+| Tecnologia | Versão | Finalidade |
+|-----------|--------|-----------|
+| [Python](https://python.org) | ≥ 3.11 | Linguagem principal do pipeline |
+| [pandas](https://pandas.pydata.org) | ≥ 2.2 | Manipulação e análise de dados tabulares |
+| [NumPy](https://numpy.org) | ≥ 1.26 | Operações numéricas vetorizadas |
+| [scikit-learn](https://scikit-learn.org) | ≥ 1.5 | `RandomForestClassifier`, `OneHotEncoder`, `Pipeline`, métricas |
+| [skl2onnx](https://onnx.ai/sklearn-onnx) | ≥ 1.18 | Exportação do pipeline sklearn para formato ONNX |
+| [ONNX Runtime](https://onnxruntime.ai) | ≥ 1.18 | Inferência do modelo exportado (Python, Android e Web) |
+| [matplotlib](https://matplotlib.org) | ≥ 3.9 | Visualizações e gráficos exploratórios |
+| [seaborn](https://seaborn.pydata.org) | ≥ 0.13 | Gráficos estatísticos de distribuição |
+| [Jupyter](https://jupyter.org) | ≥ 1.0 | Exploração interativa (notebooks opcionais) |
+
+---
+
+## Inteligência Artificial — Implementação
+
+### Problema
+
+Dado um par matriz (fêmea) + reprodutor (macho) com atributos genéticos e reprodutivos, **qual é a probabilidade de prenhez bem-sucedida?**
+
+### Abordagem: Random Forest Classifier
+
+O **Random Forest** foi escolhido como algoritmo baseline por:
+- Lidar nativamente com dados tabulares mistos (numérico + categórico após encoding)
+- Alta interpretabilidade via importância de variáveis (`feature_importances_`)
+- Robustez a ruído e outliers em datasets sintéticos
+- Boa generalização sem overfitting com poucos hiperparâmetros
+- Compatibilidade com exportação ONNX via `skl2onnx`
+- Viabilidade de execução embarcada (Android, sem GPU)
+
+### Pipeline completo
+
+```
+src/generate_dataset.py
+    │  Gera 10.000 amostras sintéticas com distribuições
+    │  zootécnicas realistas (bovinos, ovinos, caprinos)
+    ▼
+data/raw/dataset.csv
+    │
+    ▼
+src/eda.py
+    │  Análise exploratória: distribuições, correlações,
+    │  balanceamento de classes, importância preliminar
+    ▼
+reports/eda_summary.txt
+reports/target_distribution.csv
+    │
+    ▼
+src/train_random_forest.py
+    │  1. Leitura e split treino/teste (80/20, estratificado)
+    │  2. Pipeline sklearn: OneHotEncoder → RandomForestClassifier
+    │  3. Treinamento e avaliação (accuracy, F1, AUC-ROC)
+    │  4. Exportação: skl2onnx → models/random_forest_prenhez.onnx
+    │  5. Geração de relatório de métricas e importância de variáveis
+    ▼
+models/random_forest_prenhez.onnx    ← consumido pelo Android e pela Web
+reports/model_metrics.txt
+reports/feature_importance.csv
+```
+
+### 15 Variáveis Preditoras
+
+| # | Variável | Tipo | Justificativa zootécnica |
+|---|----------|------|--------------------------|
+| 1 | `especie` | string | Bovinos, ovinos e caprinos possuem fisiologias reprodutivas distintas |
+| 2 | `raca_matriz` | string | Raças leiteiras vs. corte têm diferentes aptidões reprodutivas |
+| 3 | `idade_matriz` | float | Fêmeas muito jovens ou velhas têm fertilidade reduzida |
+| 4 | `peso_matriz_kg` | float | Subnutrição compromete o ciclo estral |
+| 5 | `ecc_matriz` | float (1–5) | ECC é o principal preditor de fertilidade pós-parto |
+| 6 | `numero_partos_matriz` | int | Multíparas têm histórico reprodutivo estabelecido |
+| 7 | `abortos_matriz` | int | Histórico de abortos indica problemas de saúde reprodutiva |
+| 8 | `dias_desde_ultimo_parto` | int | Anestro pós-parto: período crítico de recuperação uterina |
+| 9 | `filhos_nascidos_matriz` | int | Fertilidade histórica comprovada |
+| 10 | `raca_macho` | string | Compatibilidade genética e aptidão do reprodutor |
+| 11 | `idade_macho` | float | Reprodutores muito jovens ou velhos têm qualidade seminal reduzida |
+| 12 | `peso_macho_kg` | float | Condição corporal do reprodutor |
+| 13 | `qualidade_semen_macho` | float (1–5) | Motilidade e concentração espermática |
+| 14 | `filhos_nascidos_macho` | int | Fertilidade do reprodutor comprovada em campo |
+| 15 | `parentesco_endogamia` | float (0–1) | Consanguinidade reduz viabilidade dos gametas |
+
+### Fórmula da Probabilidade Sintética (geração do dataset)
+
+```
+z = -1.10
+    + 1.20 × s_ecc
+    + 0.75 × s_parto
+    + 0.55 × s_semen
+    + 0.45 × s_idade_f
+    + 0.20 × s_idade_m
+    + 0.35 × s_filhos_macho
+    + 0.20 × s_filhos_femea
+    - 0.75 × s_abortos
+    - 0.95 × s_endogamia
+
+chance_prenhez = sigmoid(z)
+prenhou ~ Bernoulli(chance_prenhez)
+```
+
+### Portabilidade do Modelo
+
+O arquivo `models/random_forest_prenhez.onnx` é o **único artefato distribuído** entre os três componentes do GENIA:
+
+- **Android** (`genia-apk`): ONNX Runtime for Android — inferência 100% offline no dispositivo
+- **Web PWA** (`master`): lógica reimplementada deterministicamente em TypeScript (`app/api/prenhez/route.ts`) — sem dependência de runtime em servidor serverless
+- **Python** (esta branch): inferência via `src/inference.py` com `onnxruntime`
+
+---
+
+## Conformidade com a LGPD
+
+| Princípio LGPD | Implementação nesta branch |
+|----------------|---------------------------|
+| **Necessidade** | O dataset é **100% sintético** — nenhum dado real de produtor ou animal foi coletado ou armazenado |
+| **Finalidade** | Modelos treinados exclusivamente para suporte à decisão zootécnica no contexto do GENIA |
+| **Segurança** | Nenhuma chave de API, credencial ou dado pessoal é armazenado no repositório |
+| **Transparência** | Todo o pipeline de geração, treinamento e validação é open-source e auditável |
+| **Responsabilidade** | Código licenciado sob GPL v3.0, permitindo auditoria pública e reprodução dos resultados |
+
+O modelo não toma decisões autônomas sobre animais ou produtores — é uma **ferramenta de suporte** que apresenta estimativas probabilísticas para auxiliar a tomada de decisão humana especializada.
+
+---
+
+## Estrutura de Diretórios
+
+```
+data-and-ai/
+├── data/
+│   ├── raw/              # Datasets brutos (CSV gerado por generate_dataset.py)
+│   └── processed/        # Features intermediárias e dados tratados
+├── models/
+│   └── random_forest_prenhez.onnx   # Modelo treinado — artefato principal
+├── reports/              # Métricas, importância de variáveis, figuras EDA
+├── src/
+│   ├── generate_dataset.py   # Gerador de dataset sintético (10.000 amostras)
+│   ├── eda.py                # Análise exploratória de dados
+│   ├── train_random_forest.py # Treinamento + exportação ONNX
+│   └── inference.py          # Inferência com ONNX Runtime (Python)
+├── front end/            # Protótipo web de demonstração (Next.js)
+├── requirements.txt      # Dependências Python
+└── README.md
+```
+
+---
+
+## Configuração do Ambiente
+
+### Linux / macOS
+
+```bash
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+```
+
+### Windows (PowerShell)
 
 ```powershell
 python -m venv .venv
@@ -27,196 +202,129 @@ python -m venv .venv
 pip install -r requirements.txt
 ```
 
-## Dataset sintetico
+> **Requisito:** Python ≥ 3.11
 
-O repositorio inclui um gerador em `src/generate_dataset.py` para criar um CSV com 10.000 amostras sinteticas em `data/raw/dataset.csv`.
+---
 
-Cada linha representa:
+## Execução do Pipeline
 
-`matriz + macho -> resultado reprodutivo`
+### 1. Gerar o dataset sintético
 
-A variavel alvo e:
-
-`prenhou`
-
-Onde:
-
-- `1` = ocorreu prenhez
-- `0` = nao ocorreu prenhez
-
-### Variaveis utilizadas
-
-As colunas do dataset seguem a estrutura descrita no PDF:
-
-- `especie`
-- `raca_matriz`
-- `idade_matriz`
-- `peso_matriz_kg`
-- `ecc_matriz`
-- `numero_partos_matriz`
-- `abortos_matriz`
-- `dias_desde_ultimo_parto`
-- `filhos_nascidos_matriz`
-- `raca_macho`
-- `idade_macho`
-- `peso_macho_kg`
-- `qualidade_semen_macho`
-- `filhos_nascidos_macho`
-- `parentesco_endogamia`
-- `chance_prenhez_gerada`
-- `prenhou`
-
-### Como o dataset e gerado
-
-O processo de geracao segue a logica do relatorio tecnico:
-
-1. O script sorteia a `especie` entre bovino, ovino e caprino.
-2. A partir da especie, sorteia racas, faixas de idade, peso, partos, filhos e dias desde o ultimo parto de forma compativel com cada tipo animal. Macho e femea compartilham o mesmo conjunto de racas disponiveis dentro de cada especie.
-3. Gera variaveis biologicas e reprodutivas centrais, como `ecc_matriz`, `qualidade_semen_macho`, `abortos_matriz` e `parentesco_endogamia`.
-4. Transforma essas informacoes em escores normalizados.
-5. Calcula uma variavel latente `z` com base em uma regressao logistica sintetica.
-6. Aplica a funcao sigmoide para obter `chance_prenhez_gerada`.
-7. Amostra a coluna `prenhou` como resultado binario final.
-
-### Formula da probabilidade sintetica
-
-O gerador implementa a formulacao descrita no PDF:
-
-```text
-chance_prenhez = sigmoid(z)
-
-z = (
-  -1.10
-  + 1.20 * s_ecc
-  + 0.75 * s_parto
-  + 0.55 * s_semen
-  + 0.45 * s_idade_f
-  + 0.20 * s_idade_m
-  + 0.35 * s_filhos_macho
-  + 0.20 * s_filhos_femea
-  - 0.75 * s_abortos
-  - 0.95 * s_endogamia
-)
+```bash
+python src/generate_dataset.py --rows 10000 --seed 42 --output data/raw/dataset.csv
 ```
 
-Esses termos refletem a fundamentacao do relatorio:
+### 2. Análise exploratória
 
-- `ecc_matriz` tem peso alto por sua forte associacao com fertilidade
-- `dias_desde_ultimo_parto` representa a recuperacao pos-parto
-- `qualidade_semen_macho` melhora a chance de fecundacao
-- `abortos_matriz` penaliza a probabilidade de prenhez
-- `parentesco_endogamia` reduz a chance em casos de maior proximidade genetica
-- idade e historico reprodutivo ajudam a representar maturidade e desempenho anterior
-
-### Gerando o CSV
-
-```powershell
-python src\generate_dataset.py --rows 10000 --seed 42 --output data\raw\dataset.csv
+```bash
+python src/eda.py --input data/raw/dataset.csv --target prenhou
 ```
 
-## Analise exploratoria
+Gera em `reports/`:
+- `eda_summary.txt` — estatísticas descritivas completas
+- `target_distribution.csv` — balanceamento de classes
 
-```powershell
-python src\eda.py --input data\raw\dataset.csv --target prenhou
+### 3. Treinar e exportar o modelo
+
+```bash
+python src/train_random_forest.py --input data/raw/dataset.csv --target prenhou --n-jobs 1
 ```
 
-Esse comando gera:
+Gera em `reports/`:
+- `model_metrics.txt` — accuracy, F1-score, AUC-ROC, matriz de confusão
+- `feature_importance.csv` — importância relativa de cada variável
 
-- sumario tabular em `reports/eda_summary.txt`
-- distribuicoes simples em `reports/target_distribution.csv`
+Gera em `models/`:
+- `random_forest_prenhez.onnx` — modelo exportado para uso multiplataforma
 
-## Treinamento
+### 4. Testar inferência
 
-```powershell
-python src\train_random_forest.py --input data\raw\dataset.csv --target prenhou --n-jobs 1
+```python
+from src.inference import load_pregnancy_model, predict_pregnancy
+
+session = load_pregnancy_model("models/random_forest_prenhez.onnx")
+
+animal_data = {
+    "especie": "Bovino",
+    "raca_matriz": "Girolando",
+    "idade_matriz": 4.5,
+    "peso_matriz_kg": 430.0,
+    "ecc_matriz": 3.5,
+    "numero_partos_matriz": 2,
+    "abortos_matriz": 0,
+    "dias_desde_ultimo_parto": 90,
+    "filhos_nascidos_matriz": 2,
+    "raca_macho": "Nelore",
+    "idade_macho": 5.0,
+    "peso_macho_kg": 520.0,
+    "qualidade_semen_macho": 4.0,
+    "filhos_nascidos_macho": 15,
+    "parentesco_endogamia": 0.05,
+}
+
+result = predict_pregnancy(session, animal_data)
+print(f"Probabilidade de prenhez: {result['probability']:.1%}")
 ```
 
-Esse script:
+---
 
-- separa treino e teste
-- aplica `OneHotEncoder` para colunas categoricas
-- remove `chance_prenhez_gerada` das features por padrao para evitar vazamento da propria logica de simulacao
-- treina um `RandomForestClassifier`
-- salva metricas em `reports/model_metrics.txt`
-- salva importancias em `reports/feature_importance.csv`
-- exporta o modelo em `models/random_forest_prenhez.onnx`
+## Dataset Sintético
 
-## Por que usar Random Forest
+O dataset não contém dados reais. Cada linha representa um **cruzamento hipotético** entre uma fêmea (matriz) e um macho (reprodutor) com atributos realistas para bovinos, ovinos e caprinos do Nordeste brasileiro.
 
-Seguindo o PDF, a `Random Forest` foi escolhida porque:
+A variável-alvo `prenhou` (0 ou 1) é amostrada via distribuição de Bernoulli com probabilidade determinada pela fórmula sigmoide descrita acima, calibrada com coeficientes derivados da literatura zootécnica.
 
-- lida bem com dados tabulares
-- trabalha bem com relacoes nao lineares
-- possui boa interpretabilidade
-- funciona bem com interacoes complexas
-- tolera ruido e dados sinteticos
+---
 
-Neste repositorio, ela tambem e uma escolha pratica porque:
+## Modelo Random Forest
 
-- aceita bem a mistura de variaveis numericas e categoricas apos encoding
-- entrega uma baseline forte com pouco ajuste inicial
-- permite extrair importancia das variaveis
-- se encaixa bem no objetivo de MVP tecnico
+O treinamento utiliza um `sklearn.Pipeline` composto por:
 
-## Inferencia
+```
+Pipeline([
+    ('preprocessor', ColumnTransformer([
+        ('num', StandardScaler(), numeric_cols),
+        ('cat', OneHotEncoder(handle_unknown='ignore'), string_cols),
+    ])),
+    ('classifier', RandomForestClassifier(
+        n_estimators=100,
+        max_depth=None,
+        random_state=42,
+        n_jobs=1,
+    )),
+])
+```
 
-O arquivo salvo em `models/random_forest_prenhez.onnx` pode ser usado diretamente para inferencia com ONNX Runtime.
+A coluna `chance_prenhez_gerada` é **excluída** das features de entrada para evitar data leakage (ela é a probabilidade latente usada para gerar o alvo, não uma variável observável).
 
-Os dados de entrada devem usar as mesmas colunas do treino, exceto `prenhou`.
+---
 
-Por padrao, o treino tambem exclui `chance_prenhez_gerada`, porque essa coluna representa a probabilidade sintetica interna usada para gerar o alvo e nao deve ser tratada como variavel observada de entrada.
+## Inferência com ONNX
 
-## Frontend e regras de negocio
+O módulo `src/inference.py` fornece uma interface Python para usar o modelo exportado:
 
-O frontend em `front end/` separa o fluxo em tres paginas:
+```python
+load_pregnancy_model(model_path)   # → ort.InferenceSession
+build_onnx_inputs(animal_data)     # → dict[str, np.ndarray]
+predict_pregnancy(session, data)   # → {"probability": float, "predicted_class": int}
+```
 
-- `cadastro`: registro dos animais do plantel
-- `previsao-cruzamento`: escolha de dois animais para consultar a chance de prenhez do par
-- `painel-genetico`: ranking genetico por objetivo produtivo
+---
 
-### Diferenca entre cruzamento e ranking genetico
+## Frontend de Demonstração
 
-Existem duas logicas distintas no sistema:
+A pasta `front end/` contém um protótipo web Next.js com três páginas:
 
-1. `Previsao de cruzamento`
+| Página | Função |
+|--------|--------|
+| `cadastro` | Registro de animais do plantel |
+| `previsao-cruzamento` | Escolha de par matriz+macho → chance de prenhez via `POST /api/predict` |
+| `painel-genetico` | Ranking genético por objetivo (Leite / Corte / Fertilidade) |
 
-Essa parte usa o modelo de prenhez. O usuario escolhe dois animais, o frontend monta a combinacao `matriz + macho` e envia os dados para a rota `POST /api/predict`, que tenta usar o pipeline salvo em `models/random_forest_prenhez.joblib`.
+> Para a versão completa e segura da Web PWA, acesse a branch [`master`](../../tree/master).
 
-O resultado dessa etapa e:
+---
 
-- `chance estimada de prenhez`
+## Licença
 
-Essa previsao so faz sentido quando existe um par escolhido para cruzamento.
-
-2. `Painel genetico por objetivo`
-
-Essa parte nao usa a previsao de prenhez do cruzamento. O ranking genetico foi separado para analisar o potencial individual do animal, sem assumir um pareamento especifico.
-
-O painel usa uma heuristica de escore, implementada no frontend, que combina:
-
-- `ECC`
-- qualidade do semen
-- historico de filhos
-- endogamia
-- abortos
-- adequacao de idade
-- peso, conforme o objetivo selecionado
-- bonus por raca alinhada ao objetivo produtivo
-
-O painel mostra dois conceitos:
-
-- `base reprodutiva`: escore reprodutivo intrinseco do animal
-- `escore genetico`: nota final do objetivo selecionado (`leite`, `corte` ou `fertilidade`)
-
-Em outras palavras:
-
-- `prenhez estimada` pertence ao fluxo de cruzamento
-- `ranking genetico` pertence ao fluxo de selecao e priorizacao do plantel
-
-Essa separacao foi adotada para evitar interpretar uma chance de prenhez como se ela fosse uma propriedade fixa do animal isoladamente.
-
-## Observacoes
-
-- O alvo padrao esperado e `prenhou`.
-- O parametro `--n-jobs 1` foi adotado no exemplo de treino para evitar falhas de paralelismo no ambiente atual.
-- O dataset e sintetico e serve como base de MVP, nao como substituto de base zootecnica real validada em campo.
+GNU General Public License v3.0 — ver [LICENSE](../../blob/master/LICENSE).
