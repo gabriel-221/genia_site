@@ -144,6 +144,14 @@ export default function CalendarioPage() {
 
     setSaving(true); setErro('')
 
+    // Verifica sessão antes do insert
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session) {
+      setSaving(false)
+      setErro('Sessão expirada. Faça logout e login novamente.')
+      return
+    }
+
     const { error } = await supabase.from('genia_evento_reprodutivo').insert({
       animal_id:        formAnimal,
       tipo:             formTipo,
